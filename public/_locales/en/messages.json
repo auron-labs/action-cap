@@ -1,0 +1,18 @@
+{
+  "extensionName": {
+    "message": "ActionCap",
+    "description": "Extension display name"
+  },
+  "extensionShortName": {
+    "message": "ActionCap",
+    "description": "Short extension name"
+  },
+  "extensionDescription": {
+    "message": "A debugging tool that records browser activity, capturing page network requests and user actions with session replay.",
+    "description": "Browser activity recorder that captures network requests and user actions"
+  },
+  "actionDefaultTitle": {
+    "message": "ActionCap",
+    "description": "Default action title"
+  }
+}
