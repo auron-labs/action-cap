@@ -3,6 +3,9 @@ import { db } from '../common/storage'
 import { isProbablyTextMimeType, mergeHeaders, sanitizeHeaders, truncateBody } from '../common/sanitizer'
 import { ACTIVE_RECORDING_KEY, snapshotFromActiveRecording } from '../common/recording-state'
 import { buildSessionName } from '../common/session-utils'
+import { IS_FIREFOX } from '../common/browser-target'
+import { FirefoxNetworkCapture } from '../common/firefox-network-capture'
+
 import type {
   ActiveRecordingState,
   NetworkEvent,
@@ -34,6 +37,8 @@ type RequestContext = {
 let activeRecording: ActiveRecordingState | null = null
 const requestContexts = new Map<string, RequestContext>()
 
+let firefoxNetworkCapture: FirefoxNetworkCapture | null = null
+
 async function init() {
   const stored = await chrome.storage.local.get(ACTIVE_RECORDING_KEY)
   const restored = stored[ACTIVE_RECORDING_KEY] as ActiveRecordingState | undefined
@@ -46,6 +51,17 @@ async function init() {
   activeRecording.status = 'recording'
 
   await Promise.all(activeRecording.trackedTabIds.map((tabId) => maybeAttachDebugger(tabId)))
+}
+
+function initFirefoxNetworkCapture() {
+  if (!IS_FIREFOX || firefoxNetworkCapture) return
+
+  firefoxNetworkCapture = new FirefoxNetworkCapture(
+    recordNetworkEvent,
+    (tabId) => isTabTracked(tabId),
+    () => activeRecording?.sessionId ?? null,
+  )
+  firefoxNetworkCapture.start()
 }
 
 void init()
@@ -131,6 +147,10 @@ async function addTrackedTab(tab: chrome.tabs.Tab) {
   await db.tabs.put(record)
   await updateSessionCounts()
 
+  if (IS_FIREFOX) {
+    initFirefoxNetworkCapture()
+  }
+
   if (isTrackableUrl(tab.url)) {
     await maybeAttachDebugger(tab.id)
     await sendStartMessage(tab.id)
@@ -187,6 +207,7 @@ async function recordNetworkEvent(event: NetworkEvent) {
 }
 
 async function maybeAttachDebugger(tabId: number) {
+  if (IS_FIREFOX) return
   if (!activeRecording || activeRecording.debuggerTabIds.includes(tabId)) {
     return
   }
@@ -203,6 +224,7 @@ async function maybeAttachDebugger(tabId: number) {
 }
 
 async function detachDebugger(tabId: number) {
+  if (IS_FIREFOX) return
   if (!activeRecording || !activeRecording.debuggerTabIds.includes(tabId)) {
     return
   }
@@ -352,6 +374,7 @@ async function stopRecording() {
   const resultUrl = chrome.runtime.getURL(`results.html?sessionId=${finalState.sessionId}`)
   activeRecording = null
   requestContexts.clear()
+  firefoxNetworkCapture?.clear()
   await persistActiveState()
   try {
     await chrome.tabs.create({
@@ -573,6 +596,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   })()
 })
 
+if (!IS_FIREFOX) {
 chrome.debugger.onEvent.addListener((source, method, params) => {
   void (async () => {
     const tabId = source.tabId
@@ -759,3 +783,4 @@ chrome.debugger.onDetach.addListener((source, reason) => {
     }
   })()
 })
+}

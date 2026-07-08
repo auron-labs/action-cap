@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:firefox": "ACTIONCAP_BROWSER=firefox tsc --noEmit && ACTIONCAP_BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",
     "edge:package": "npm run build && node scripts/package-edge.mjs"
   },
