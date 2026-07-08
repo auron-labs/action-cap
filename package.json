@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "build:firefox": "ACTIONCAP_BROWSER=firefox tsc --noEmit && ACTIONCAP_BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",
-    "edge:package": "npm run build && node scripts/package-edge.mjs"
+    "edge:package": "npm run build && node scripts/package-edge.mjs",
+    "firefox:package": "npm run build:firefox && node scripts/package-firefox.mjs"
   },
   "dependencies": {
     "dexie": "^4.0.11",
