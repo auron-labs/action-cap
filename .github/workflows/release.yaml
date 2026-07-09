@@ -19,7 +19,7 @@ jobs:
       cli_tag_name: ${{ steps.release.outputs['packages/action-cap-cli--tag_name'] }}
     steps:
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
