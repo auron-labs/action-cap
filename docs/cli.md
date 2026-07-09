@@ -4,12 +4,12 @@ The `@auron-labs/action-cap-cli` package is a TypeScript CLI for analyzing Actio
 
 ## Install
 
-Install from npm:
+Install with Bun:
 
 ```bash
 bunx @auron-labs/action-cap-cli --help
 # or
-npm install -g @auron-labs/action-cap-cli
+bun install -g @auron-labs/action-cap-cli
 actioncap --help
 ```
 
