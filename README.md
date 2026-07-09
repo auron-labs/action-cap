@@ -5,106 +5,74 @@
 [![Release](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml/badge.svg)](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml)
 [![Latest Release](https://img.shields.io/github/v/release/skye-z/ActionCap)](https://github.com/skye-z/ActionCap/releases)
 
-[中文文档](README_zh.md)
+A browser activity recorder for Chrome, Edge, and Firefox. ActionCap captures user actions, network traffic, and rrweb replay data, stores sessions locally in IndexedDB, and lets you inspect or export them as `.bxdac` archives.
 
-[![LDO](https://ldo.betax.dev/badge/community)](https://linux.do/)
+## What it does
 
-A browser activity recording tool for Edge / Chrome. Captures page network requests and user actions during browsing, with built-in session replay powered by rrweb.
+- Record a single tab, the current window, or all browser windows.
+- Capture requests, responses, user actions, and DOM replay data in one timeline.
+- Replay sessions locally with rrweb and inspect payloads in the built-in results page.
+- Export sessions for offline analysis with the companion CLI.
 
-## Features
+## Browser support
 
-**Three Recording Scopes**
-- **Current Tab** — Record activity in a single tab.
-- **Across Tabs** — Record all tabs in the current window.
-- **All Windows** — Record all tabs across every browser window.
+| Browser | Support | Notes |
+|---|---|---|
+| Chrome | Yes | Uses the `debugger` permission for network capture. |
+| Edge | Yes | Also available from the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jgphnnhmpipdkklgebfhfbheagkdipnj). |
+| Firefox | Yes | Use the Firefox build (`bun run build:firefox`) and load it as a temporary add-on. |
 
-**Full Network Capture**
-- Captures request/response headers and bodies via DevTools Protocol.
-- Supports JSON, HTML, XML, form data, and other text-based content types.
-- Large payloads are automatically truncated; binary content is filtered.
+Internal browser pages such as `chrome://` and `edge://` cannot be recorded.
 
-**User Action Tracking**
-- Records clicks, double-clicks, right-clicks, keyboard input, form submissions, scrolling, focus changes, and page navigations.
-- Generates stable selectors for each element (`data-testid` > `id` > `name` > `aria-label` > CSS path).
+## Privacy and safety
 
-**Session Replay**
-- Visual playback of recorded sessions using rrweb.
-- Full DOM snapshots with incremental change tracking.
+- All recorded data stays on your device in IndexedDB unless you manually export it.
+- ActionCap does not upload session data, analytics, or telemetry to a server.
+- Sensitive fields are masked where possible, but exported `.bxdac` files can still contain highly sensitive data such as tokens, cookies, request bodies, and page content.
+- Treat exported sessions as secrets and review them before sharing.
 
-**Timeline & Analysis**
-- Unified timeline with network events and user actions displayed chronologically.
-- Filter by type: All / Actions / Network / Errors.
-- Search across actions, requests, and URLs.
-- Detail panel with formatted payload viewer for request and response bodies.
-
-**Session Management**
-- Rename, delete, import, and export sessions.
-- Sessions are exported as `.bxdac` files (JSON format).
-- All data is stored locally in IndexedDB — nothing is uploaded to any server.
-
-**Sensitive Data Handling**
-- Fields containing `password`, `token`, `authorization`, `cookie`, `secret`, `phone`, `idcard` are automatically masked.
-- Headers with sensitive keys are replaced with `***`.
+See the [Privacy Policy](docs/PRIVACY_POLICY.md) and [Permission Justification](docs/PERMISSION_JUSTIFICATION.md) for the full caveats.
 
 ## Install
 
-### Edge Add-ons (Recommended)
+### Extension
 
-Install directly from the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jgphnnhmpipdkklgebfhfbheagkdipnj).
-
-### Manual Install
-
-1. Download the latest `.zip` from [Releases](https://github.com/skye-z/ActionCap/releases).
-2. Unzip the file.
-3. Open `edge://extensions` or `chrome://extensions`.
-4. Enable **Developer mode**.
-5. Click **Load unpacked** and select the unzipped folder.
+1. **Edge store:** install from the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jgphnnhmpipdkklgebfhfbheagkdipnj).
+2. **Chrome / Edge from source:** `bun install && bun run build`, then load `dist/` from `chrome://extensions` or `edge://extensions` with **Developer mode** enabled.
+3. **Firefox from source:** `bun install && bun run build:firefox`, then load `dist/` from `about:debugging#/runtime/this-firefox` as a temporary add-on.
 
 ### Companion CLI
 
-Install the published CLI from npm:
+Run the published CLI with Bun:
 
 ```bash
 bunx @auron-labs/action-cap-cli --help
-# or
-npm install -g @auron-labs/action-cap-cli
+```
+
+Or install it globally with Bun:
+
+```bash
+bun install -g @auron-labs/action-cap-cli
 actioncap --help
 ```
 
-## Usage
+See [docs/cli.md](docs/cli.md) for commands and examples.
+
+## Quick usage
 
 1. Click the ActionCap icon in the browser toolbar.
-2. Select a recording scope (Current Tab / Across Tabs / All Windows).
-3. Click **Start Recording** — the browser will show a debugging notice bar, this is expected.
-4. Browse normally. All network requests and user actions are being captured.
+2. Choose a recording scope: current tab, current window, or all windows.
+3. Click **Start Recording**. Chrome and Edge show the expected debugging banner while recording.
+4. Browse normally.
 5. Click the ActionCap icon again and press **Stop Recording**.
-6. Click **View Sessions** to open the results page, review the timeline, inspect request details, or replay the session.
+6. Open **View Sessions** to inspect the timeline, replay the session, or export a `.bxdac` archive.
 
-## FAQ
+## Docs
 
-**Why does a "debugging" banner appear when I start recording?**
-ActionCap uses the `debugger` permission to capture network traffic via the Chrome DevTools Protocol. The browser displays this banner as a security measure whenever any extension activates the debugger. This is normal and the banner disappears when recording stops.
-
-**Can I record `chrome://` or `edge://` pages?**
-No. Browser internal pages do not allow extension script injection. ActionCap can only record regular web pages.
-
-**Where is my data stored?**
-All recorded data is stored locally in the browser's IndexedDB. ActionCap does not upload any data to remote servers. Data only leaves your device if you manually export a session.
-
-**Can exported session files contain sensitive information?**
-Yes. Exported files may contain passwords, tokens, cookies, and other sensitive data captured during the recording. Do not share exported files with untrusted parties. See the [Privacy Policy](https://github.com/skye-z/ActionCap/blob/main/docs/PRIVACY_POLICY.md) for details.
-
-**Why are some response bodies missing or truncated?**
-Response bodies larger than 1 MB are automatically truncated to save storage. Binary content (images, fonts, etc.) is not captured.
-
-**Does ActionCap affect page performance?**
-ActionCap has minimal impact during normal recording. However, pages with extremely high request volumes may experience slightly increased memory usage.
-
-## Development
-
-For local development setup, testing, building, and packaging instructions, see [docs/development.md](docs/development.md).
-
-For a managed dev server, use `pitchfork start extension` after `mise install`.
+- [Development guide](docs/development.md)
+- [CLI reference](docs/cli.md)
+- [Privacy policy](docs/PRIVACY_POLICY.md)
+- [Permission justification](docs/PERMISSION_JUSTIFICATION.md)
 
 ## License
 

@@ -1,4 +1,4 @@
-import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, type JSX, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import rrwebPlayer from 'rrweb-player'
 import { applyDocumentLocale, getLocaleTag, t } from '../common/i18n'
 import { buildSessionArchive, db, getSessionBundle, importSessionArchive, listSessions } from '../common/storage'

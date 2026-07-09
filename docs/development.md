@@ -1,6 +1,6 @@
 # Development
 
-How to set up, develop, test, build, and package the ActionCap extension and CLI.
+How to set up, develop, test, build, and package the ActionCap extension and CLI. For contribution workflow, PR expectations, and release policy, see [../CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Repository structure
 
@@ -121,6 +121,8 @@ Generates promotional images for the Edge store using Pillow. Requires Python 3 
 
 ## CLI development
 
+For end-user CLI command reference, examples, and output formats, see [cli.md](cli.md) or the package README at [../packages/action-cap-cli/README.md](../packages/action-cap-cli/README.md).
+
 ### Prerequisites
 
 - [Bun](https://bun.sh) runtime
@@ -204,15 +206,10 @@ Use `bun install <pkg>` for dependencies. The CLI's dependencies:
 | `pathe` | Path utilities |
 | `zod` | Archive schema validation |
 
-## Localization
+## Contributor guardrails
 
-When adding or changing UI strings:
-
-1. Add keys to both `en-US` and `zh-CN` message objects in `src/common/i18n.ts`.
-2. For manifest strings, update both `public/_locales/en/messages.json` and `public/_locales/zh_CN/messages.json`.
-
-## Security guidelines
-
+- Match the existing style: 2-space indentation, single quotes, named imports/exports, and PascalCase React component files.
+- When adding or changing UI strings, update both `en-US` and `zh-CN` entries in `src/common/i18n.ts` and the matching manifest locale files under `public/_locales/`.
 - Never weaken the sanitizer, masking, or permission logic in `src/common/sanitizer.ts`.
 - Never commit real credentials, `.env` files, or exported session files.
-- The extension handles extremely sensitive data (passwords, tokens, cookies, request/response bodies, full DOM snapshots).
+- Treat recorded data and exported `.bxdac` files as highly sensitive.

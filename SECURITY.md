@@ -28,4 +28,7 @@ The extension automatically masks values for sensitive keys (`password`, `token`
 
 Exported `.bxdac` files may still contain sensitive data that was not caught by the masking rules. Users should treat exported files as sensitive and avoid sharing them with untrusted parties.
 
-See [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) for full privacy details.
+For more detail, see:
+
+- [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) for storage, export, and privacy expectations
+- [docs/PERMISSION_JUSTIFICATION.md](docs/PERMISSION_JUSTIFICATION.md) for browser permission rationale

@@ -10,25 +10,25 @@
     "build": "tsc --noEmit && vite build",
     "build:firefox": "ACTIONCAP_BROWSER=firefox tsc --noEmit && ACTIONCAP_BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/results/payload-format.test.ts",
+    "test": "bun test src/results/payload-format.test.ts",
     "edge:package": "bun run build && node scripts/package-edge.mjs",
     "firefox:package": "bun run build:firefox && node scripts/package-firefox.mjs"
   },
   "dependencies": {
-    "dexie": "^4.0.11",
+    "dexie": "^4.4.4",
     "highlight.js": "^11.11.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "rrweb": "^2.0.0-alpha.18",
-    "rrweb-player": "^2.0.0-alpha.18"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "rrweb": "^2.1.0",
+    "rrweb-player": "^2.1.0"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.26",
-    "@types/chrome": "^0.0.273",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "typescript": "^5.5.4",
-    "vite": "^5.4.2"
+    "@crxjs/vite-plugin": "^2.7.1",
+    "@types/chrome": "^0.2.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.3"
   }
 }

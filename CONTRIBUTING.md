@@ -1,11 +1,6 @@
 # Contributing to ActionCap
 
-Thanks for your interest in contributing to ActionCap! This guide covers the basics for getting set up.
-
-## Prerequisites
-
-- [Bun](https://bun.sh)
-- Chrome, Edge, or Firefox for testing the extension
+Thanks for your interest in contributing to ActionCap. This guide covers contribution workflow; use the development docs for setup, build, and package details.
 
 ## Repository structure
 
@@ -18,23 +13,11 @@ ActionCap has two independent packages:
 
 The CLI is **not** a Bun workspace — it is a standalone package with its own `bun.lock`.
 
-## Setup
+## Getting started
 
-### Extension
-
-```bash
-bun install
-bun run dev          # start Vite dev server
-pitchfork start extension
-```
-
-### CLI
-
-```bash
-cd packages/action-cap-cli
-bun install
-bun run dev -- --help
-```
+- Use [docs/development.md](docs/development.md) for repository setup, local development, testing, builds, and packaging.
+- Use [packages/action-cap-cli/README.md](packages/action-cap-cli/README.md) or [docs/cli.md](docs/cli.md) for CLI command usage.
+- Test extension changes in Chrome, Edge, or Firefox as appropriate for the feature.
 
 ## Development workflow
 
@@ -55,12 +38,7 @@ bun run dev -- --help
 
 ## Code style
 
-No linter or formatter is configured. Match the existing style:
-
-- 2-space indentation
-- Single quotes
-- Named imports/exports
-- PascalCase for React component files
+No linter or formatter is configured. Match the surrounding style and the conventions documented in [docs/development.md](docs/development.md).
 
 ## Localization
 
@@ -79,7 +57,7 @@ When adding or changing UI strings:
 
 Releases are automated via [release-please](https://github.com/googleapis/release-please) driven by conventional commits. Merging a release PR creates a GitHub release and uploads extension store archives automatically.
 
-The CLI is published to npm as `@auron-labs/action-cap-cli` when its version changes. This requires the `NPM_TOKEN` secret to be configured in repository settings.
+The CLI is published to npm as `@auron-labs/action-cap-cli` when its version changes. This depends on the repository release workflow and the `NPM_TOKEN` secret configured in GitHub Actions.
 
 ## License
 

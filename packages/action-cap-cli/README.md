@@ -4,7 +4,7 @@ A TypeScript CLI for analyzing ActionCap extension exports (`.bxdac` session arc
 
 ## Overview
 
-ActionCap is a browser extension that records browser activity into IndexedDB. Users export sessions as `.bxdac` files (JSON with the `actioncap-session-archive` format). This CLI parses those archives and produces focused data views. Output defaults to pretty-printed JSON; [TOON](https://toonformat.dev) (Token-Oriented Object Notation) is available via `--format toon` for compact, LLM-friendly output.
+ActionCap users export sessions as `.bxdac` files (JSON with the `actioncap-session-archive` format). This CLI parses those archives and produces focused data views. Output defaults to pretty-printed JSON; [TOON](https://toonformat.dev) (Token-Oriented Object Notation) is available via `--format toon` for compact, LLM-friendly output.
 
 ## Install
 
@@ -12,7 +12,7 @@ ActionCap is a browser extension that records browser activity into IndexedDB. U
 bunx @auron-labs/action-cap-cli --help
 
 # or install globally
-npm install -g @auron-labs/action-cap-cli
+bun install -g @auron-labs/action-cap-cli
 actioncap --help
 
 # From the package directory
@@ -27,104 +27,37 @@ bun run build
 ./dist/cli.js --help
 ```
 
-## Commands
+The npm package name is `@auron-labs/action-cap-cli`. It exposes the `actioncap` binary after installation.
+
+## Quick usage
 
 Every command takes a positional `<file>` argument (path to a `.bxdac` or `.json` archive).
 
-### `summary <file>`
-
-Session overview: metadata, duration, counts, tabs, time range.
+Common entry points:
 
 ```bash
 bun run src/cli.ts summary recording.bxdac
-```
-
-### `actions <file>`
-
-Chronological user action timeline (clicks, inputs, navigations). Excludes scroll events by default.
-
-```bash
 bun run src/cli.ts actions recording.bxdac
-bun run src/cli.ts actions recording.bxdac --include-scroll
-bun run src/cli.ts actions recording.bxdac --tab 12345 --type click
-```
-
-### `network <file>`
-
-All network requests with method, URL, status, timing. Bodies truncated to 500 chars by default; headers excluded by default.
-
-```bash
 bun run src/cli.ts network recording.bxdac
 bun run src/cli.ts network recording.bxdac --headers
-```
-
-### `errors <file>`
-
-Failed network requests (4xx/5xx or errorText present) with full response bodies.
-
-```bash
 bun run src/cli.ts errors recording.bxdac
-```
-
-### `endpoints <file>`
-
-Deduplicated API endpoints with methods, status codes, and call counts.
-
-```bash
 bun run src/cli.ts endpoints recording.bxdac
-```
-
-### `forms <file>`
-
-Form submissions cross-referenced with preceding input/change events. Masked values preserved.
-
-```bash
 bun run src/cli.ts forms recording.bxdac
-```
-
-### `navigation <file>`
-
-Navigation and tab lifecycle events showing URL transitions in chronological order.
-
-```bash
 bun run src/cli.ts navigation recording.bxdac
-```
-
-### `elements <file>`
-
-Unique elements interacted with (deduplicated by selector), with action types and counts.
-
-```bash
 bun run src/cli.ts elements recording.bxdac
-```
-
-### `tabs <file>`
-
-Tab lifecycle: creation, activation, removal with titles and URLs.
-
-```bash
 bun run src/cli.ts tabs recording.bxdac
-```
-
-### `replay <file>`
-
-Metadata about rrweb replay events (count, time range, estimated size). Does not output full payloads by default.
-
-```bash
 bun run src/cli.ts replay recording.bxdac
-bun run src/cli.ts replay recording.bxdac --full
-```
-
-### `dump <file>`
-
-Complete archive dump, pretty-printed JSON by default.
-
-```bash
 bun run src/cli.ts dump recording.bxdac
+bun run src/cli.ts network recording.bxdac --headers --format table
+bun run src/cli.ts errors recording.bxdac --status ">=400"
 bun run src/cli.ts dump recording.bxdac --no-replay
 ```
 
-## Global Options
+Available commands: `summary`, `actions`, `network`, `errors`, `endpoints`, `forms`, `navigation`, `elements`, `tabs`, `replay`, `dump`.
+
+For the full command reference, flags, filtering examples, and output-format details, see [../../docs/cli.md](../../docs/cli.md).
+
+## Common options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
@@ -137,35 +70,7 @@ bun run src/cli.ts dump recording.bxdac --no-replay
 | `--limit` | `number` | — | Max events to output. |
 | `--verbose` | `boolean` | `false` | Verbose logging to stderr. |
 
-## Output Formats
-
-### JSON (default)
-
-Pretty-printed JSON for human inspection, debugging, or piping to other tools.
-
-```bash
-# Default JSON output
-bun run src/cli.ts summary recording.bxdac
-
-# Explicitly request JSON
-bun run src/cli.ts summary recording.bxdac --format json
-```
-
-### Table
-
-Human-readable table output.
-
-```bash
-bun run src/cli.ts network recording.bxdac --format table
-```
-
-### TOON
-
-[TOON](https://toonformat.dev) encodes JSON using YAML-like indentation with CSV-style tabular arrays, producing a compact, human-readable representation that reduces token count for LLM context windows.
-
-```bash
-bun run src/cli.ts summary recording.bxdac --format toon
-```
+Supported output formats are `json`, `table`, and `toon`. Use `toon` when you want a more compact, LLM-friendly representation.
 
 ## Development
 
@@ -176,6 +81,8 @@ bun run build        # Compile TypeScript to dist/
 bun run typecheck    # Type check without emitting
 bun test             # Run test suite
 ```
+
+For repository-wide development, packaging, and release checks, see [../../docs/development.md](../../docs/development.md).
 
 ## Data Model
 
@@ -189,7 +96,7 @@ The CLI works with `.bxdac` files exported by the ActionCap browser extension. E
 | `networkEvents` | HTTP requests/responses via Chrome DevTools Protocol |
 | `replayEvents` | rrweb DOM snapshots for session replay |
 
-Sensitive values (passwords, tokens, auth, cookies) are masked by the extension before storage. The CLI preserves `masked` flags.
+Sensitive values (passwords, tokens, auth, cookies) are masked by the extension before storage. The CLI preserves `masked` flags, but exported archives can still contain sensitive data and should be handled carefully.
 
 ## License
 

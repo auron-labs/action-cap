@@ -22,12 +22,8 @@ All recorded data is stored locally in IndexedDB. Nothing is uploaded to any ser
 | [Data Model](data-model.md) | Database schema, archive format, event types |
 | [Development](development.md) | Local development, testing, building, packaging |
 | [Troubleshooting](troubleshooting.md) | Common problems, causes, and fixes |
-
-## Privacy and permissions
-
-- [Privacy Policy](PRIVACY_POLICY.md) — what data is recorded, how it is stored, export warnings
-- [Permission Justification](PERMISSION_JUSTIFICATION.md) — why each browser permission is required
-- [设计方案 (Chinese Design Doc)](设计方案.md) — original product design specification
+| [Privacy Policy](PRIVACY_POLICY.md) | Sensitive-data handling, local storage, export warnings |
+| [Permission Justification](PERMISSION_JUSTIFICATION.md) | Why each browser permission is required |
 
 ## Recommended reading order
 
