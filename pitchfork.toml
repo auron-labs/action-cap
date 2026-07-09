@@ -1,0 +1,5 @@
+[daemons.extension]
+run = "mise run dev"
+ready_port = 5173
+auto = ["start", "stop"]
+retry = true

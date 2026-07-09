@@ -6,14 +6,14 @@ Common problems, their causes, and fixes. Issues are grouped by component.
 
 ### Build fails with TypeScript errors
 
-**Symptom:** `npm run build` or `npm run typecheck` reports TypeScript errors.
+**Symptom:** `bun run build` or `bun run typecheck` reports TypeScript errors.
 
 **Cause:** TypeScript type errors in source files.
 
 **Fix:**
 
 ```bash
-npm run typecheck
+bun run typecheck
 ```
 
 This runs `tsc --noEmit` and isolates the errors. Fix each error before rebuilding.
@@ -68,29 +68,29 @@ This runs `tsc --noEmit` and isolates the errors. Fix each error before rebuildi
 
 ### Source maps are not emitted
 
-**Symptom:** The `dist/` folder does not contain source maps after `npm run build`.
+**Symptom:** The `dist/` folder does not contain source maps after `bun run build`.
 
 **Cause:** Source maps are disabled by default.
 
 **Fix:**
 
 ```bash
-ACTIONCAP_SOURCE_MAPS=true npm run build
+ACTIONCAP_SOURCE_MAPS=true bun run build
 ```
 
-### `npm test` does not exist
+### `bun run test` fails
 
-**Symptom:** Running `npm test` fails or reports no test script.
+**Symptom:** Running `bun run test` fails.
 
-**Cause:** The extension project has no `test` script in `package.json`. The only test file is `src/results/payload-format.test.ts`, which uses Node's built-in test runner.
+**Cause:** The extension test script runs Node's built-in test runner against `src/results/payload-format.test.ts`.
 
 **Fix:**
 
 ```bash
-node --test src/results/payload-format.test.ts
+bun run test
 ```
 
-### `npm run edge:package` or `npm run firefox:package` fails
+### `bun run edge:package` or `bun run firefox:package` fails
 
 **Symptom:** Packaging script fails with an error about `zip` not found.
 
@@ -99,7 +99,7 @@ node --test src/results/payload-format.test.ts
 **Fix:**
 
 1. Install `zip` on your system (e.g., `brew install zip` on macOS, or it is typically pre-installed on Linux).
-2. Ensure `npm run build` (or `npm run build:firefox`) succeeded first.
+2. Ensure `bun run build` (or `bun run build:firefox`) succeeded first.
 3. Run the packaging command again.
 
 ## CLI

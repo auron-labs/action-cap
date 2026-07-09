@@ -2,14 +2,17 @@
   "name": "actioncap",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.14",
   "type": "module",
   "scripts": {
+    "preinstall": "case \"$npm_execpath\" in *bun*) exit 0 ;; *) bunx only-allow bun ;; esac",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:firefox": "ACTIONCAP_BROWSER=firefox tsc --noEmit && ACTIONCAP_BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",
-    "edge:package": "npm run build && node scripts/package-edge.mjs",
-    "firefox:package": "npm run build:firefox && node scripts/package-firefox.mjs"
+    "test": "node --test src/results/payload-format.test.ts",
+    "edge:package": "bun run build && node scripts/package-edge.mjs",
+    "firefox:package": "bun run build:firefox && node scripts/package-firefox.mjs"
   },
   "dependencies": {
     "dexie": "^4.0.11",

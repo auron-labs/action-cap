@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { defineCommand, runMain } from 'citty'
 import summary from './commands/summary.js'
 import actions from './commands/actions.js'

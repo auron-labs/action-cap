@@ -24,47 +24,48 @@ ActionCap is a Chrome/Edge Manifest V3 browser extension that records browser ac
 
 | Purpose | Command | When to run |
 |---|---|---|
-| Install dependencies | `npm install` | Fresh checkout or dependency changes |
-| Start dev server | `npm run dev` | Local development (HMR for extension pages) |
-| Build extension | `npm run build` | Before testing the packaged extension or releasing |
-| Build Firefox extension | `npm run build:firefox` | Before testing in Firefox or releasing for Firefox |
-| Type check | `npm run typecheck` | After TypeScript changes |
-| Package for Edge store | `npm run edge:package` | After `build` to create `artifacts/edge/actioncap-edge-v*.zip` |
-| Package for Firefox | `npm run firefox:package` | After `build:firefox` to create `artifacts/firefox/actioncap-firefox-v*.zip` |
-| Run payload-format tests | `node --test src/results/payload-format.test.ts` | After editing `payload-format.ts` or its tests |
+| Install dependencies | `bun install` | Fresh checkout or dependency changes |
+| Start dev server | `bun run dev` | Local development (HMR for extension pages) |
+| Start managed dev server | `pitchfork start extension` | Local development with pitchfork lifecycle management |
+| Build extension | `bun run build` | Before testing the packaged extension or releasing |
+| Build Firefox extension | `bun run build:firefox` | Before testing in Firefox or releasing for Firefox |
+| Type check | `bun run typecheck` | After TypeScript changes |
+| Run extension tests | `bun run test` | After editing `payload-format.ts` or its tests |
+| Package for Edge store | `bun run edge:package` | After `build` to create `artifacts/edge/actioncap-edge-v*.zip` |
+| Package for Firefox | `bun run firefox:package` | After `build:firefox` to create `artifacts/firefox/actioncap-firefox-v*.zip` |
 
-Note: there is no `npm test` script. The only test file is `src/results/payload-format.test.ts` and uses Node's built-in test runner.
+Note: the extension `test` script runs `node --test src/results/payload-format.test.ts` through Bun.
 
 ## Setup
 
-- Use Node.js compatible with this project (lockfile is `package-lock.json` if present; npm is the package manager).
-- Install dependencies with `npm install`.
+- Use Bun for both packages. Each package keeps its own `bun.lock`.
+- Install dependencies with `bun install` at the repo root and `bun install` inside `packages/action-cap-cli/` when working on the CLI directly.
 - No environment files are required for local development or build.
 - The build does not require local services.
-- Chrome/Edge: `npm run build` then load `dist/` as an unpacked extension via `chrome://extensions` or `edge://extensions` with Developer mode enabled.
-- Firefox: `npm run build:firefox` then load `dist/` as a temporary add-on via `about:debugging#/runtime/this-firefox` (Load Temporary Add-on). The Firefox build uses `webRequest` + `filterResponseData` instead of `chrome.debugger` for network capture, so no debugging banner appears during recording.
+- Chrome/Edge: `bun run build` then load `dist/` as an unpacked extension via `chrome://extensions` or `edge://extensions` with Developer mode enabled.
+- Firefox: `bun run build:firefox` then load `dist/` as a temporary add-on via `about:debugging#/runtime/this-firefox` (Load Temporary Add-on). The Firefox build uses `webRequest` + `filterResponseData` instead of `chrome.debugger` for network capture, so no debugging banner appears during recording.
 
 ## Development workflow
 
-- `npm run dev` starts the Vite dev server. For an extension, you will typically load the built `dist/` folder into the browser in developer mode after running `npm run build`.
-- After `npm run build`, load the `dist/` directory as an unpacked extension via `chrome://extensions` or `edge://extensions` with Developer mode enabled.
+- `bun run dev` starts the Vite dev server. `pitchfork start extension` manages the same dev server with auto start/stop on directory enter/leave.
+- After `bun run build`, load the `dist/` directory as an unpacked extension via `chrome://extensions` or `edge://extensions` with Developer mode enabled.
 - The `popup.html` and `results.html` entry points are declared in `vite.config.ts` and `src/manifest.ts`.
 - The service worker is `src/background/service-worker.ts`, declared in `src/manifest.ts` as `background.service_worker` with `type: 'module'`.
 - The content script is `src/content/recorder.ts`, injected at `document_start` for all URLs.
 
 ## Testing
 
-- Run payload-format tests: `node --test src/results/payload-format.test.ts`
+- Run payload-format tests: `bun run test`
 - There is no framework test suite. Add Node test files next to the source they test (e.g., `src/foo/bar.test.ts`) and run them with `node --test`.
 - `tsconfig.json` excludes `src/**/*.test.ts` from the project, so tests do not affect the build.
 
 ## Change-aware validation
 
 1. Check changed files with `git status --short`.
-2. After TypeScript changes, run `npm run typecheck`.
-3. After changes to `src/results/payload-format.ts`, run `node --test src/results/payload-format.test.ts`.
-4. Before any release-impacting change, run `npm run build`.
-5. If you changed the manifest, build output, or packaging logic, run `npm run edge:package` to verify the store archive is produced.
+2. After TypeScript changes, run `bun run typecheck`.
+3. After changes to `src/results/payload-format.ts`, run `bun run test`.
+4. Before any release-impacting change, run `bun run build`.
+5. If you changed the manifest, build output, or packaging logic, run `bun run edge:package` to verify the store archive is produced.
 
 ## Code style
 
@@ -100,9 +101,9 @@ Note: there is no `npm test` script. The only test file is `src/results/payload-
 
 ## Generated files and code generation
 
-- `dist/` is generated by `npm run build`. Do not edit it directly.
-- `artifacts/edge/` is generated by `npm run edge:package`. Do not edit it directly.
-- `artifacts/firefox/` is generated by `npm run firefox:package`. Do not edit it directly.
+- `dist/` is generated by `bun run build`. Do not edit it directly.
+- `artifacts/edge/` is generated by `bun run edge:package`. Do not edit it directly.
+- `artifacts/firefox/` is generated by `bun run firefox:package`. Do not edit it directly.
 - Both are gitignored.
 - `store-assets/` is generated by `scripts/generate-edge-assets.py` (requires Pillow in a system Python environment). It is not part of the npm build.
 
@@ -115,8 +116,8 @@ Note: there is no `npm test` script. The only test file is `src/results/payload-
 
 ## Dependencies
 
-- Use `npm`. Do not switch to pnpm or yarn.
-- Add runtime dependencies with `npm install <pkg>`. Add dev dependencies with `npm install -D <pkg>`.
+- Use `bun`.
+- Add runtime dependencies with `bun add <pkg>`. Add dev dependencies with `bun add -d <pkg>`.
 - Avoid adding new runtime dependencies unless necessary; the extension ships its own bundle, so bundle size matters.
 
 ## Security and privacy
@@ -130,19 +131,18 @@ Note: there is no `npm test` script. The only test file is `src/results/payload-
 
 ## PR and final checks
 
-- Run `npm run typecheck` after TypeScript changes.
-- Run `npm run build` before any release-impacting change.
-- Run `node --test src/results/payload-format.test.ts` if you changed payload formatting logic.
-- If the manifest or icons changed, run `npm run edge:package` and `npm run firefox:package` to verify both store archives are produced.
+- Run `bun run typecheck` after TypeScript changes.
+- Run `bun run build` before any release-impacting change.
+- Run `bun run test` if you changed payload formatting logic.
+- If the manifest or icons changed, run `bun run edge:package` and `bun run firefox:package` to verify both store archives are produced.
 - Do not weaken sanitizer, masking, or permission logic.
 - Keep localization keys in sync across both `zh-CN` and `en-US` in `src/common/i18n.ts`.
 
 ## Known pitfalls
 
-- `npm test` does not exist. Use `node --test src/results/payload-format.test.ts` directly.
-- `npm run edge:package` requires the `zip` CLI to be installed.
-- `npm run firefox:package` requires the `zip` CLI to be installed.
-- `npm run build` only emits source maps when `ACTIONCAP_SOURCE_MAPS=true` is set.
+- `bun run edge:package` requires the `zip` CLI to be installed.
+- `bun run firefox:package` requires the `zip` CLI to be installed.
+- `bun run build` only emits source maps when `ACTIONCAP_SOURCE_MAPS=true` is set.
 - The extension cannot record `chrome://` or `edge://` pages. Internal browser pages block extension script injection.
 - The content script is injected at `document_start`, so it may bootstrap before the service worker is ready; bootstrap message failures are intentionally ignored.
 - The service worker restores an active recording from `chrome.storage.local` on init and re-attaches debuggers to previously tracked tabs.
@@ -151,6 +151,6 @@ Note: there is no `npm test` script. The only test file is `src/results/payload-
 
 ## Troubleshooting
 
-- If `npm run build` fails with TypeScript errors, run `npm run typecheck` to isolate them.
-- If `npm run edge:package` fails, ensure `zip` is installed and `npm run build` succeeded first.
+- If `bun run build` fails with TypeScript errors, run `bun run typecheck` to isolate them.
+- If `bun run edge:package` fails, ensure `zip` is installed and `bun run build` succeeded first.
 - If the content script does not start recording after a build, verify the extension is reloaded and the service worker is running.

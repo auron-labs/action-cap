@@ -1,0 +1,61 @@
+[tools]
+node = "20"
+bun = "latest"
+hk = "latest"
+pitchfork = "latest"
+
+[tasks.install]
+description = "Install extension dependencies"
+run = "bun install"
+
+[tasks."install:cli"]
+description = "Install CLI dependencies"
+dir = "packages/action-cap-cli"
+run = "bun install"
+
+[tasks.dev]
+description = "Start Vite dev server"
+run = "bun run dev"
+depends = ["install"]
+
+[tasks.build]
+description = "Build the extension (Chrome/Edge)"
+run = "bun run build"
+
+[tasks."build:firefox"]
+description = "Build the extension (Firefox)"
+run = "bun run build:firefox"
+
+[tasks.typecheck]
+description = "Type-check the extension"
+run = "bun run typecheck"
+
+[tasks."typecheck:cli"]
+description = "Type-check the CLI"
+dir = "packages/action-cap-cli"
+run = "bun run typecheck"
+
+[tasks.test]
+description = "Run extension payload-format tests"
+run = "bun run test"
+
+[tasks."test:cli"]
+description = "Run CLI tests"
+dir = "packages/action-cap-cli"
+run = "bun test"
+
+[tasks.lint]
+description = "Run hk checks"
+run = "hk check --all"
+
+[tasks.fix]
+description = "Run hk auto-fix"
+run = "hk fix"
+
+[tasks."edge:package"]
+description = "Build and package for Edge store"
+run = "bun run edge:package"
+
+[tasks."firefox:package"]
+description = "Build and package for Firefox store"
+run = "bun run firefox:package"

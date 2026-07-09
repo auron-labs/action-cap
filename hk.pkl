@@ -1,0 +1,50 @@
+amends "package://github.com/jdx/hk/releases/download/v1.50.0/hk@1.50.0#/Config.pkl"
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps {
+      ["check-merge-conflict"] {
+        check = "hk util check-merge-conflict {{files}}"
+      }
+      ["detect-private-key"] {
+        check = "hk util detect-private-key {{files}}"
+      }
+      ["check-added-large-files"] {
+        check = "hk util check-added-large-files {{files}}"
+      }
+      ["trailing-whitespace"] {
+        fix = "hk util trailing-whitespace {{files}}"
+      }
+      ["end-of-file-fixer"] {
+        fix = "hk util end-of-file-fixer {{files}}"
+      }
+    }
+  }
+
+  ["commit-msg"] {
+    steps {
+      ["conventional-commit"] {
+        check = "hk util check-conventional-commit {{commit_msg_file}}"
+      }
+    }
+  }
+
+  ["check"] {
+    steps {
+      ["check-merge-conflict"] {
+        check = "hk util check-merge-conflict {{files}}"
+      }
+      ["detect-private-key"] {
+        check = "hk util detect-private-key {{files}}"
+      }
+      ["check-added-large-files"] {
+        check = "hk util check-added-large-files {{files}}"
+      }
+      ["trailing-whitespace"] {
+        check = "hk util trailing-whitespace --check {{files}}"
+      }
+    }
+  }
+}

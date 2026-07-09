@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      cli_release_created: ${{ steps.release.outputs['packages/action-cap-cli--release_created'] }}
+      cli_tag_name: ${{ steps.release.outputs['packages/action-cap-cli--tag_name'] }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  extension-release:
+    name: Build & Upload Extension Artifacts
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-root-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-root-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Package for Edge store
+        run: bun run edge:package
+
+      - name: Package for Firefox store
+        run: bun run firefox:package
+
+      - name: Upload artifacts to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" \
+            artifacts/edge/actioncap-edge-v*.zip \
+            artifacts/edge/actioncap-edge-v*.zip.sha256 \
+            artifacts/firefox/actioncap-firefox-v*.zip \
+            artifacts/firefox/actioncap-firefox-v*.zip.sha256
+
+  cli-publish:
+    name: Publish CLI to npm
+    needs: release-please
+    if: ${{ needs.release-please.outputs.cli_release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.cli_tag_name }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-cli-${{ hashFiles('packages/action-cap-cli/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-cli-
+
+      - name: Install CLI dependencies
+        working-directory: packages/action-cap-cli
+        run: bun install --frozen-lockfile
+
+      - name: Build CLI
+        working-directory: packages/action-cap-cli
+        run: bun run build
+
+      - name: Publish to npm
+        working-directory: packages/action-cap-cli
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

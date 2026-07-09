@@ -1,8 +1,19 @@
 # CLI Reference
 
-The `action-cap-cli` is a TypeScript CLI for analyzing ActionCap extension exports (`.bxdac` session archive files) and extracting data useful for LLM agents.
+The `@auron-labs/action-cap-cli` package is a TypeScript CLI for analyzing ActionCap extension exports (`.bxdac` session archive files) and extracting data useful for LLM agents.
 
 ## Install
+
+Install from npm:
+
+```bash
+bunx @auron-labs/action-cap-cli --help
+# or
+npm install -g @auron-labs/action-cap-cli
+actioncap --help
+```
+
+Or work from source:
 
 ```bash
 cd packages/action-cap-cli
@@ -22,7 +33,7 @@ bun run build
 ./dist/cli.js --help
 ```
 
-The package defines a `bin` entry: `actioncap` → `./dist/cli.js`.
+The package name on npm is `@auron-labs/action-cap-cli`. It defines a `bin` entry: `actioncap` → `./dist/cli.js`.
 
 ## Commands
 

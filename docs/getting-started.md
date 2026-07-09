@@ -6,8 +6,7 @@ This guide covers installing both the ActionCap browser extension and the Action
 
 ### Browser extension
 
-- **Node.js** (compatible with the project's dependencies; npm is the package manager)
-- **npm** — comes with Node.js
+- **[Bun](https://bun.sh)** runtime
 - A Chromium-based browser (Chrome or Edge) or Firefox 115+
 
 ### CLI
@@ -26,19 +25,19 @@ Install directly from the [Microsoft Edge Add-ons Store](https://microsoftedge.m
 ```bash
 git clone https://github.com/skye-z/ActionCap.git
 cd ActionCap
-npm install
+bun install
 ```
 
 Build for Chrome or Edge:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Build for Firefox:
 
 ```bash
-npm run build:firefox
+bun run build:firefox
 ```
 
 Load the built extension:
@@ -49,6 +48,12 @@ Load the built extension:
 | Firefox | Open `about:debugging#/runtime/this-firefox` → click **Load Temporary Add-on** → select any file inside the `dist/` folder |
 
 ## Install the CLI
+
+```bash
+bunx @auron-labs/action-cap-cli --help
+```
+
+Or work from source:
 
 ```bash
 cd packages/action-cap-cli

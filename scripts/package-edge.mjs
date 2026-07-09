@@ -12,7 +12,7 @@ const packageJson = JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'u
 const version = packageJson.version
 
 if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
-  throw new Error('Missing dist/ directory. Run `npm run build` before packaging.')
+  throw new Error('Missing dist/ directory. Run `bun run build` before packaging.')
 }
 
 mkdirSync(outputDir, { recursive: true })

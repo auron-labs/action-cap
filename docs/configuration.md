@@ -20,7 +20,7 @@ Read in:
 Used by the `build:firefox` script:
 
 ```bash
-npm run build:firefox
+bun run build:firefox
 ```
 
 Which runs:
@@ -47,7 +47,7 @@ sourcemap: process.env.ACTIONCAP_SOURCE_MAPS === 'true',
 Usage:
 
 ```bash
-ACTIONCAP_SOURCE_MAPS=true npm run build
+ACTIONCAP_SOURCE_MAPS=true bun run build
 ```
 
 ## Config files

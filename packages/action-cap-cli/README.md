@@ -1,4 +1,4 @@
-# action-cap-cli
+# @auron-labs/action-cap-cli
 
 A TypeScript CLI for analyzing ActionCap extension exports (`.bxdac` session archive files) and extracting data useful for LLM agents.
 
@@ -9,6 +9,12 @@ ActionCap is a browser extension that records browser activity into IndexedDB. U
 ## Install
 
 ```bash
+bunx @auron-labs/action-cap-cli --help
+
+# or install globally
+npm install -g @auron-labs/action-cap-cli
+actioncap --help
+
 # From the package directory
 cd packages/action-cap-cli
 bun install

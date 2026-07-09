@@ -116,7 +116,7 @@ packages/action-cap-cli/
 
 Per the `typescript-cli` skill:
 - **Bun** for package management (`bun install`, `bun add`, `bun run`)
-- This is a new package in an existing npm repo; the root uses npm with `package-lock.json`. The CLI package will use its own `bun.lock` and operate independently. The root `package.json` is `private: true` with no workspace config, so the CLI package is a standalone package in `packages/` that gets its own install.
+- This is a new package in an existing Bun-based repo. The CLI package keeps its own `bun.lock` and operates independently. The root `package.json` is `private: true` with no workspace config, so the CLI package is a standalone package in `packages/` that gets its own install.
 
 ### Dependencies
 

@@ -1,5 +1,10 @@
 # ActionCap
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/skye-z/ActionCap/actions/workflows/ci.yaml/badge.svg)](https://github.com/skye-z/ActionCap/actions/workflows/ci.yaml)
+[![Release](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml/badge.svg)](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml)
+[![Latest Release](https://img.shields.io/github/v/release/skye-z/ActionCap)](https://github.com/skye-z/ActionCap/releases)
+
 [中文文档](README_zh.md)
 
 [![LDO](https://ldo.betax.dev/badge/community)](https://linux.do/)
@@ -55,6 +60,17 @@ Install directly from the [Microsoft Edge Add-ons Store](https://microsoftedge.m
 4. Enable **Developer mode**.
 5. Click **Load unpacked** and select the unzipped folder.
 
+### Companion CLI
+
+Install the published CLI from npm:
+
+```bash
+bunx @auron-labs/action-cap-cli --help
+# or
+npm install -g @auron-labs/action-cap-cli
+actioncap --help
+```
+
 ## Usage
 
 1. Click the ActionCap icon in the browser toolbar.
@@ -83,6 +99,12 @@ Response bodies larger than 1 MB are automatically truncated to save storage. Bi
 
 **Does ActionCap affect page performance?**
 ActionCap has minimal impact during normal recording. However, pages with extremely high request volumes may experience slightly increased memory usage.
+
+## Development
+
+For local development setup, testing, building, and packaging instructions, see [docs/development.md](docs/development.md).
+
+For a managed dev server, use `pitchfork start extension` after `mise install`.
 
 ## License
 
