@@ -1,6 +1,6 @@
 {
   "name": "@auron-labs/action-cap-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for analyzing ActionCap .bxdac session archives.",
   "license": "MIT",
   "homepage": "https://github.com/skye-z/ActionCap/tree/main/packages/action-cap-cli",
