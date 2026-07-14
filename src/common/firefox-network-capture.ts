@@ -16,6 +16,13 @@ type RequestContext = {
   mimeType?: string
 }
 
+type ResponseCaptureState = {
+  chunks: Uint8Array[]
+  capturedBytes: number
+  retainBody: boolean
+  truncated: boolean
+}
+
 type NetworkEventCallback = (event: NetworkEvent) => Promise<void>
 
 type FirefoxHeader = { name: string; value?: string; binaryValue?: number[] }
@@ -155,10 +162,53 @@ function decodeRequestBody(details: FirefoxWebRequestDetails): string | undefine
 
 const MAX_RESPONSE_BODY_LENGTH = 1_000_000
 
+export function createResponseCaptureState(): ResponseCaptureState {
+  return {
+    chunks: [],
+    capturedBytes: 0,
+    retainBody: true,
+    truncated: false,
+  }
+}
+
+export function captureResponseChunk(
+  state: ResponseCaptureState,
+  chunk: Uint8Array,
+  maxBytes = MAX_RESPONSE_BODY_LENGTH,
+) {
+  if (!state.retainBody || chunk.length === 0) {
+    return
+  }
+
+  const remainingBytes = maxBytes - state.capturedBytes
+  if (remainingBytes <= 0) {
+    state.truncated = true
+    return
+  }
+
+  if (chunk.length > remainingBytes) {
+    state.chunks.push(chunk.slice(0, remainingBytes))
+    state.capturedBytes += remainingBytes
+    state.truncated = true
+    return
+  }
+
+  state.chunks.push(chunk)
+  state.capturedBytes += chunk.length
+}
+
+export function disableResponseBodyRetention(state: ResponseCaptureState) {
+  state.chunks = []
+  state.capturedBytes = 0
+  state.truncated = true
+  state.retainBody = false
+}
+
 export class FirefoxNetworkCapture {
   private requestContexts = new Map<string, RequestContext>()
   private responseFilters = new Map<string, FirefoxStreamFilter>()
-  private responseBuffers = new Map<string, Uint8Array[]>()
+  private responseStates = new Map<string, ResponseCaptureState>()
+  private pendingResponseFinalizations = new Set<string>()
   private recordNetworkEvent: NetworkEventCallback
   private isTabTracked: (tabId: number) => boolean
   private getSessionId: () => string | null
@@ -258,6 +308,11 @@ export class FirefoxNetworkCapture {
         )
         if (details.mimeType) {
           context.mimeType = details.mimeType
+
+          const captureState = this.responseStates.get(key)
+          if (captureState && !isProbablyTextMimeType(details.mimeType)) {
+            disableResponseBodyRetention(captureState)
+          }
         }
       },
       filter,
@@ -286,38 +341,47 @@ export class FirefoxNetworkCapture {
     const browser = getFirefoxBrowser()
     const streamFilter = browser.webRequest.filterResponseData(requestId)
     this.responseFilters.set(key, streamFilter)
-    this.responseBuffers.set(key, [])
+    this.responseStates.set(key, createResponseCaptureState())
 
     streamFilter.ondata = (event) => {
-      const buffers = this.responseBuffers.get(key)
-      if (buffers) {
-        buffers.push(new Uint8Array(event.data))
+      streamFilter.write(event.data)
+
+      const state = this.responseStates.get(key)
+      if (!state) {
+        return
       }
+
+      if (!state.retainBody) {
+        return
+      }
+
+      captureResponseChunk(state, new Uint8Array(event.data))
     }
 
     streamFilter.onstop = () => {
+      this.pendingResponseFinalizations.delete(key)
       void this.emitResponse(key, tabId, requestId)
     }
 
     streamFilter.onerror = () => {
       this.responseFilters.delete(key)
-      this.responseBuffers.delete(key)
+      this.responseStates.delete(key)
+
+      if (this.pendingResponseFinalizations.delete(key)) {
+        void this.finalizeResponse({ requestId, tabId })
+      }
     }
   }
 
   private async emitResponse(key: string, tabId: number, requestId: string) {
     const streamFilter = this.responseFilters.get(key)
-    const buffers = this.responseBuffers.get(key)
+    const captureState = this.responseStates.get(key)
     const context = this.requestContexts.get(key)
 
     this.responseFilters.delete(key)
-    this.responseBuffers.delete(key)
+    this.responseStates.delete(key)
 
     if (streamFilter) {
-      if (buffers && buffers.length > 0) {
-        const passthrough = combineUint8Arrays(buffers)
-        streamFilter.write(passthrough)
-      }
       streamFilter.close()
     }
 
@@ -332,12 +396,10 @@ export class FirefoxNetworkCapture {
 
     if (isProbablyTextMimeType(context.mimeType)) {
       try {
-        if (buffers && buffers.length > 0) {
-          const combined = combineUint8Arrays(buffers)
-          const decoded = new TextDecoder().decode(combined)
-          const truncatedBody = truncateBody(decoded, MAX_RESPONSE_BODY_LENGTH)
-          responseBody = truncatedBody.body
-          truncated = truncatedBody.truncated
+        if (captureState && captureState.chunks.length > 0) {
+          const combined = combineUint8Arrays(captureState.chunks)
+          responseBody = new TextDecoder().decode(combined)
+          truncated = captureState.truncated
         }
       } catch {
         responseBody = '[failed to decode response body]'
@@ -379,8 +441,11 @@ export class FirefoxNetworkCapture {
 
     if (this.responseFilters.has(key)) {
       // The stream filter will handle emitting the response via onstop
+      this.pendingResponseFinalizations.add(key)
       return
     }
+
+    this.pendingResponseFinalizations.delete(key)
 
     if (!context) return
 
@@ -414,11 +479,12 @@ export class FirefoxNetworkCapture {
     const key = `${details.tabId}:${details.requestId}`
     const context = this.requestContexts.get(key)
     const streamFilter = this.responseFilters.get(key)
+    this.pendingResponseFinalizations.delete(key)
 
     if (streamFilter) {
       streamFilter.disconnect()
       this.responseFilters.delete(key)
-      this.responseBuffers.delete(key)
+      this.responseStates.delete(key)
     }
 
     if (!context) return
@@ -458,7 +524,8 @@ export class FirefoxNetworkCapture {
       }
     }
     this.responseFilters.clear()
-    this.responseBuffers.clear()
+    this.responseStates.clear()
+    this.pendingResponseFinalizations.clear()
     this.requestContexts.clear()
   }
 }
