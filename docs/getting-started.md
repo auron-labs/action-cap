@@ -23,7 +23,7 @@ Install directly from the [Microsoft Edge Add-ons Store](https://microsoftedge.m
 ### Manual install from source
 
 ```bash
-git clone https://github.com/skye-z/ActionCap.git
+git clone https://github.com/auron-labs/action-cap.git
 cd ActionCap
 bun install
 ```
@@ -120,10 +120,10 @@ Confirm the CLI is working:
 
 ```bash
 cd packages/action-cap-cli
-bun run src/cli.ts summary ../sample.bxdac
+bun run src/cli.ts summary test/fixtures/sample.bxdac
 ```
 
-The repository includes a sample archive at `sample.bxdac` (extension root) and at `packages/action-cap-cli/test/fixtures/sample.bxdac` (CLI test fixture).
+The CLI package includes a sample archive at `packages/action-cap-cli/test/fixtures/sample.bxdac`.
 
 ## Next steps
 

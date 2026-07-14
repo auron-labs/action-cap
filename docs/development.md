@@ -24,12 +24,16 @@ The CLI is **not** a Bun workspace — it is a standalone package with its own `
 
 ```bash
 bun install
+# or via mise:
+mise run install
 ```
 
 ### Start dev server
 
 ```bash
 bun run dev
+# or via mise:
+mise run dev
 ```
 
 This starts the Vite dev server with HMR for extension pages. For extension testing, you will typically also load the built `dist/` folder into the browser after running `bun run build`.
@@ -39,6 +43,8 @@ If you want pitchfork to manage the dev server lifecycle, run:
 ```bash
 pitchfork start extension
 ```
+
+Pitchfork is configured in `pitchfork.toml` to run `mise run dev` on port 5173 with auto start/stop.
 
 ### Build
 
@@ -66,13 +72,13 @@ Runs `tsc --noEmit`. Run this after any TypeScript changes.
 
 ### Testing
 
-The extension test script uses Node's built-in test runner via Bun:
+The extension test script uses Bun's built-in test runner:
 
 ```bash
 bun run test
 ```
 
-Test files live next to the source they test (e.g., `src/foo/bar.test.ts`). The `tsconfig.json` excludes `src/**/*.test.ts` from the build, so tests do not affect the output.
+This runs `bun test src/**/*.test.ts`, executing all test files matching that glob. Test files live next to the source they test (e.g., `src/common/sanitizer.test.ts`, `src/results/payload-format.test.ts`). The `tsconfig.json` excludes `src/**/*.test.ts` from the build, so tests do not affect the output.
 
 ### No linter or formatter
 
@@ -82,6 +88,25 @@ No ESLint, Prettier, or other linter is configured. Match the existing style:
 - Single quotes
 - Named imports/exports
 - PascalCase for React component files
+
+### Git hooks (hk)
+
+The repository uses [hk](https://github.com/jdx/hk) for pre-commit hooks, configured in `hk.pkl`. Pre-commit hooks run:
+
+- Merge conflict detection
+- Private key detection
+- Large file detection
+- Trailing whitespace fixing
+- End-of-file fixing
+
+Commit messages must follow [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, `docs:`), enforced by the `commit-msg` hook.
+
+Run hk checks manually:
+
+```bash
+mise run lint    # Run all hk checks
+mise run fix     # Run hk auto-fix
+```
 
 ## Extension packaging
 
@@ -167,14 +192,15 @@ Tests use `bun:test`. The test file is `test/views.test.ts` with a fixture at `t
 
 After making changes, run the relevant checks:
 
-| Change | Command |
-|---|---|
-| Any TypeScript change (extension) | `bun run typecheck` |
-| Any TypeScript change (CLI) | `cd packages/action-cap-cli && bun run typecheck` |
-| Changes to `src/results/payload-format.ts` | `bun run test` |
-| Before any release-impacting change | `bun run build` |
-| Manifest, icons, or packaging changes | `bun run edge:package` and `bun run firefox:package` |
-| CLI changes | `cd packages/action-cap-cli && bun test` |
+| Change | Command | Mise equivalent |
+|---|---|---|
+| Any TypeScript change (extension) | `bun run typecheck` | `mise run typecheck` |
+| Any TypeScript change (CLI) | `cd packages/action-cap-cli && bun run typecheck` | `mise run typecheck:cli` |
+| Changes to `src/results/payload-format.ts` or other extension tests | `bun run test` | `mise run test` |
+| Before any release-impacting change | `bun run build` | `mise run build` |
+| Manifest, icons, or packaging changes | `bun run edge:package` and `bun run firefox:package` | `mise run edge:package` and `mise run firefox:package` |
+| CLI changes | `cd packages/action-cap-cli && bun test` | `mise run test:cli` |
+| Pre-commit hook checks | — | `mise run lint` |
 
 ## Generated files
 

@@ -93,6 +93,38 @@ Defines the Manifest V3 extension manifest. Key settings:
 | Firefox Gecko ID | `actioncap@actioncap.dev` |
 | Firefox min version | `115.0` |
 
+### `mise.toml` (tooling)
+
+Defines project tool versions and task aliases.
+
+| Setting | Value |
+|---|---|
+| `node` | `20` |
+| `bun` | `1.3.14` |
+| `hk` | `latest` |
+| `pitchfork` | `latest` |
+
+Tasks defined: `install`, `install:cli`, `dev`, `build`, `build:firefox`, `typecheck`, `typecheck:cli`, `test`, `test:cli`, `lint`, `fix`, `edge:package`, `firefox:package`.
+
+### `hk.pkl` (Git hooks)
+
+Configures [hk](https://github.com/jdx/hk) pre-commit and commit-msg hooks:
+
+- **Pre-commit**: merge conflict detection, private key detection, large file detection, trailing whitespace fix, end-of-file fix.
+- **Commit-msg**: conventional commit format validation.
+- **Check**: merge conflict detection, private key detection, large file detection, trailing whitespace check (run via `mise run lint`). Does not auto-fix.
+
+### `pitchfork.toml` (dev server)
+
+Configures the pitchfork-managed dev server:
+
+| Setting | Value |
+|---|---|
+| Command | `mise run dev` |
+| Ready port | `5173` |
+| Auto lifecycle | `start`, `stop` |
+| Retry | `true` |
+
 ### `packages/action-cap-cli/tsconfig.json` (CLI)
 
 | Setting | Value |
@@ -116,7 +148,7 @@ Application UI strings (in-app, not manifest) are defined in `src/common/i18n.ts
 - China timezones → `zh-CN`
 - All other timezones → `en-US`
 
-Source: `src/common/i18n.ts:5-11, 262-267`
+Source: `src/common/i18n.ts:5-11, 270-276`
 
 ## Sensitive data masking
 
@@ -124,19 +156,23 @@ The sanitizer (`src/common/sanitizer.ts`) automatically masks values whose keys 
 
 - `password`, `token`, `authorization`, `cookie`, `secret`, `phone`, `idcard`
 
-Masked values are replaced with `***`. Input fields with `type="password"` are also masked.
+Masking behavior:
 
-Source: `src/common/sanitizer.ts:1-38`
+- Header values and input field values are replaced with `***`.
+- Printable keys (keyboard input on sensitive fields) are replaced with `[masked]`. Control keys (Enter, Tab, Shift, arrow keys, F-keys, etc.) are never masked.
+- Input fields with `type="password"` or whose `name`/`id`/`aria-label` matches a sensitive token are also masked.
+
+Source: `src/common/sanitizer.ts:1-69`
 
 ## Response body truncation
 
 | Condition | Behavior |
 |---|---|
 | Body length ≤ 1,000,000 chars | Stored in full |
-| Body length > 1,000,000 chars | Truncated to 1,000,000 chars with a `[truncated N chars]` suffix |
+| Body length > 1,000,000 chars | Truncated to 1,000,000 chars with a `...[truncated N chars]` suffix |
 | Binary MIME type | Body replaced with `[binary <mimeType> omitted]` |
 
-Source: `src/common/sanitizer.ts:54-67`
+Source: `src/common/sanitizer.ts:101-130`
 
 ## CLI defaults
 

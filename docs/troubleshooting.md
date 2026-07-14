@@ -57,7 +57,7 @@ This runs `tsc --noEmit` and isolates the errors. Fix each error before rebuildi
 
 ### Response bodies are missing or truncated
 
-**Symptom:** Some network response bodies show `[truncated N chars]` or `[binary <mimeType> omitted]`.
+**Symptom:** Some network response bodies show `...[truncated N chars]` or `[binary <mimeType> omitted]`.
 
 **Cause:**
 - Bodies larger than 1,000,000 characters are truncated to save storage space.
@@ -82,7 +82,7 @@ ACTIONCAP_SOURCE_MAPS=true bun run build
 
 **Symptom:** Running `bun run test` fails.
 
-**Cause:** The extension test script runs Node's built-in test runner against `src/results/payload-format.test.ts`.
+**Cause:** The extension test script runs `bun test src/**/*.test.ts`, executing all test files in the `src/` tree.
 
 **Fix:**
 

@@ -53,17 +53,19 @@ Top-level metadata for a recording session.
 | Field | Type | Description |
 |---|---|---|
 | `id` | string | UUID |
-| `name` | string | User-assigned session name |
-| `status` | string | `recording` or `stopped` |
-| `scope` | string | Recording scope: `current-tab`, `across-tabs`, or `all-windows` |
+| `name` | string \| undefined | User-assigned session name |
+| `status` | string | `recording`, `stopped`, or `failed` |
+| `scope` | string | Recording scope: `current-tab`, `cross-tab`, or `all-windows` |
 | `startTime` | number | Start timestamp (ms since epoch) |
-| `endTime` | number \| null | End timestamp |
-| `startTabId` | number \| undefined | Tab where recording started |
-| `startWindowId` | number \| undefined | Window where recording started |
+| `endTime` | number \| undefined | End timestamp |
+| `startTabId` | number | Tab where recording started |
+| `startWindowId` | number | Window where recording started |
 | `tabCount` | number | Number of tracked tabs |
 | `actionCount` | number | Number of user actions |
 | `networkCount` | number | Number of network events |
 | `replayCount` | number | Number of rrweb replay events |
+
+Source: `src/common/types.ts:23-36`, `packages/action-cap-cli/src/types.ts:21-34`
 
 ### TrackedTabRecord
 
@@ -75,8 +77,14 @@ A browser tab tracked during recording.
 | `sessionId` | string | Parent session ID |
 | `tabId` | number | Browser tab ID |
 | `windowId` | number | Browser window ID |
+| `title` | string \| undefined | Tab title |
+| `url` | string \| undefined | Tab URL |
+| `faviconUrl` | string \| undefined | Tab favicon URL |
+| `attachedDebugger` | boolean | Whether the Chrome debugger is attached to this tab |
 | `firstSeenAt` | number | When the tab was first tracked |
-| `lastSeenAt` | number \| undefined | Last activity timestamp |
+| `lastSeenAt` | number | Last activity timestamp |
+
+Source: `src/common/types.ts:38-49`, `packages/action-cap-cli/src/types.ts:36-47`
 
 ### UserActionEvent
 
@@ -90,7 +98,7 @@ A single user interaction event.
 | `frameId` | number | Frame ID (default 0) |
 | `ts` | number | Timestamp (ms since epoch) |
 | `type` | string | Action type (see below) |
-| `url` | string \| undefined | Page URL at time of action |
+| `url` | string | Page URL at time of action |
 | `title` | string \| undefined | Page title |
 | `selector` | string \| undefined | Stable element selector |
 | `element` | object \| undefined | Element snapshot (tagName, text, id, className, role, name) |
@@ -102,7 +110,7 @@ A single user interaction event.
 
 **Action types:** `click`, `dblclick`, `contextmenu`, `input`, `change`, `keydown`, `keyup`, `submit`, `scroll`, `focus`, `blur`, `navigation`, `tab-activated`, `tab-created`, `tab-removed`, `window-focus`
 
-Source: `packages/action-cap-cli/src/lib/archive.ts:17-41`
+Source: `src/common/types.ts:60-76`, `packages/action-cap-cli/src/types.ts:58-74`
 
 ### NetworkEvent
 
@@ -115,7 +123,7 @@ A network request/response event captured via CDP or webRequest.
 | `tabId` | number | Tab where the request originated |
 | `requestId` | string | CDP request ID |
 | `ts` | number | Timestamp (ms since epoch) |
-| `phase` | string | CDP phase (e.g. `requestWillBeSent`, `responseReceived`, `loadingFinished`) |
+| `phase` | `'request'` \| `'response'` | Whether this event represents the request or response phase |
 | `url` | string | Request URL |
 | `method` | string \| undefined | HTTP method |
 | `status` | number \| undefined | HTTP status code |
@@ -126,9 +134,13 @@ A network request/response event captured via CDP or webRequest.
 | `responseHeaders` | object \| undefined | Response headers (sensitive keys masked) |
 | `requestBody` | string \| undefined | Request body |
 | `responseBody` | string \| undefined | Response body (truncated if > 1MB, omitted if binary) |
+| `bodyEncoding` | `'plain'` \| `'base64'` \| undefined | Encoding of the response body |
+| `durationMs` | number \| undefined | Request duration in milliseconds |
+| `initiator` | string \| undefined | Request initiator |
+| `truncated` | boolean \| undefined | Whether the response body was truncated |
 | `errorText` | string \| undefined | Error text if the request failed |
 
-Source: `packages/action-cap-cli/src/lib/archive.ts:43-61`
+Source: `src/common/types.ts:78-100`, `packages/action-cap-cli/src/types.ts:76-98`
 
 ### ReplayEventRecord
 
@@ -140,37 +152,43 @@ An rrweb DOM snapshot event for session replay.
 | `sessionId` | string | Parent session ID |
 | `tabId` | number | Tab where the event was recorded |
 | `ts` | number | Timestamp (ms since epoch) |
-| `data` | object | rrweb event data (full DOM snapshot or incremental change) |
+| `payload` | unknown | rrweb event data (full DOM snapshot or incremental change) |
+
+Source: `src/common/types.ts:102-108`, `packages/action-cap-cli/src/types.ts:100-106`
 
 ## Sensitive data handling
 
 ### Masking
 
-Values whose keys contain any of these tokens (case-insensitive) are masked with `***`:
+Values whose keys contain any of these tokens (case-insensitive) are masked:
 
 `password`, `token`, `authorization`, `cookie`, `secret`, `phone`, `idcard`
 
-Input fields with `type="password"` are also masked. The `masked` boolean flag is preserved in exported archives.
+- Header values and input field values are replaced with `***`.
+- Printable keys (keyboard input on sensitive fields) are replaced with `[masked]`. Control keys are never masked.
+- Input fields with `type="password"` or whose `name`/`id`/`aria-label` matches a sensitive token are also masked.
 
-Source: `src/common/sanitizer.ts:1-38`
+The `masked` boolean flag is preserved in exported archives.
+
+Source: `src/common/sanitizer.ts:1-69`
 
 ### Truncation
 
 | Condition | Behavior |
 |---|---|
 | Body length ≤ 1,000,000 chars | Stored in full |
-| Body length > 1,000,000 chars | Truncated with `[truncated N chars]` suffix |
+| Body length > 1,000,000 chars | Truncated with `...[truncated N chars]` suffix |
 | Non-text MIME type | Body replaced with `[binary <mimeType> omitted]` |
 | `Network.getResponseBody` fails | Body set to `[failed to capture response body: <error>]` |
 
-Source: `src/common/sanitizer.ts:54-67`, `src/background/service-worker.ts:708-711`
+Source: `src/common/sanitizer.ts:101-114`, `src/background/service-worker.ts:707-712`
 
 ## CLI archive parsing
 
 The CLI validates `.bxdac` archives using Zod schemas. If validation fails, it throws an `ArchiveError` with details about which field failed validation.
 
-The parser accepts:
-- Full archive format (with `format`, `version`, `exportedAt`, `bundle` fields)
-- Bare bundle format (just `session`, `tabs`, `userActions`, `networkEvents`, `replayEvents` at the top level)
+The CLI parser (`parseArchive` in `packages/action-cap-cli/src/lib/archive.ts:155-166`) accepts only the full archive format (with `format`, `version`, `exportedAt`, `bundle` fields). It does not accept bare bundles.
 
-Source: `packages/action-cap-cli/src/lib/archive.ts:130-166`, `src/common/storage.ts:64-72`
+The extension's import logic (`asSessionBundle` in `src/common/storage.ts:80-100`) accepts both the full archive format and bare bundles (for backward compatibility with older exports).
+
+Source: `packages/action-cap-cli/src/lib/archive.ts:155-166`, `src/common/storage.ts:80-100`

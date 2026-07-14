@@ -49,7 +49,7 @@ bun run src/cli.ts summary recording.bxdac
 
 ### `actions <file>`
 
-Chronological user action timeline (clicks, inputs, navigations). Excludes scroll events by default.
+Chronological user action timeline (clicks, inputs, navigations). Excludes scroll events by default; use `--include-scroll` to include them.
 
 ```bash
 bun run src/cli.ts actions recording.bxdac
@@ -59,7 +59,7 @@ bun run src/cli.ts actions recording.bxdac --tab 12345 --type click
 
 ### `network <file>`
 
-All network requests with method, URL, status, timing. Bodies truncated to 500 chars by default; headers excluded by default.
+All network requests with method, URL, status, timing. Response/request bodies truncated to 500 chars by default; headers excluded by default. Use `--headers` to include full, untruncated headers and bodies.
 
 ```bash
 bun run src/cli.ts network recording.bxdac
@@ -68,7 +68,7 @@ bun run src/cli.ts network recording.bxdac --headers
 
 ### `errors <file>`
 
-Failed network requests (4xx/5xx or errorText present) with full, untruncated response bodies.
+Failed network requests (status ≥ 400 or errorText present) with full, untruncated response bodies.
 
 ```bash
 bun run src/cli.ts errors recording.bxdac
@@ -76,7 +76,7 @@ bun run src/cli.ts errors recording.bxdac
 
 ### `endpoints <file>`
 
-Deduplicated API endpoints with methods, status codes, and call counts.
+Deduplicated API endpoints with methods, statuses, and call counts.
 
 ```bash
 bun run src/cli.ts endpoints recording.bxdac
@@ -84,7 +84,7 @@ bun run src/cli.ts endpoints recording.bxdac
 
 ### `forms <file>`
 
-Form submissions cross-referenced with preceding input/change events. Masked values are preserved.
+Form submissions with associated input values. Preceding input/change events on the same tab are cross-referenced. Masked values are preserved.
 
 ```bash
 bun run src/cli.ts forms recording.bxdac
@@ -100,7 +100,7 @@ bun run src/cli.ts navigation recording.bxdac
 
 ### `elements <file>`
 
-Unique elements interacted with (deduplicated by selector), with action types and counts.
+Unique elements interacted with, with action types and counts. Deduplicated by selector.
 
 ```bash
 bun run src/cli.ts elements recording.bxdac
@@ -116,7 +116,7 @@ bun run src/cli.ts tabs recording.bxdac
 
 ### `replay <file>`
 
-Metadata about rrweb replay events (count, time range, estimated size). Does not output full payloads by default.
+rrweb replay event metadata (count, time range, estimated size). Does not output full payloads by default.
 
 ```bash
 bun run src/cli.ts replay recording.bxdac
@@ -125,7 +125,7 @@ bun run src/cli.ts replay recording.bxdac --full
 
 ### `dump <file>`
 
-Complete archive dump as pretty-printed JSON.
+Complete archive dump.
 
 ```bash
 bun run src/cli.ts dump recording.bxdac
@@ -134,20 +134,29 @@ bun run src/cli.ts dump recording.bxdac --no-replay
 
 ## Global options
 
-These flags are available on all commands unless otherwise noted.
+`--format` and `--verbose` are available on every command (defined in `formatArgs`).
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
 | `--format` | `json` \| `table` \| `toon` | `json` | Output format |
-| `--tab` | number | — | Filter to a specific tab ID |
-| `--type` | string | — | Filter by event type (comma-separated, e.g. `click,input`) |
-| `--status` | string | — | Filter network by status (e.g. `4xx`, `5xx`, `200`, `>=400`) |
-| `--from` | number | — | Start timestamp (ms since epoch) |
-| `--to` | number | — | End timestamp (ms since epoch) |
-| `--limit` | number | — | Max events to output |
 | `--verbose` | boolean | `false` | Verbose logging to stderr |
 
-Source: `packages/action-cap-cli/src/lib/args.ts`
+Source: `packages/action-cap-cli/src/lib/args.ts:13-16`
+
+## Common filter flags
+
+Most commands accept some subset of these filter flags. The table below shows which commands accept each flag.
+
+| Flag | Type | Commands | Description |
+|---|---|---|---|
+| `--tab` | number | `summary`, `actions`, `network`, `errors`, `forms`, `navigation`, `elements`, `tabs`, `replay` | Filter to a specific tab ID |
+| `--type` | string | `summary`, `actions` | Filter by event type (comma-separated, e.g. `click,input`) |
+| `--status` | string | `summary`, `network` | Filter network by status (e.g. `4xx`, `5xx`, `200`, `>=400`) |
+| `--from` | number | `summary`, `actions`, `network`, `errors`, `forms`, `navigation`, `elements`, `tabs`, `replay` | Start timestamp (ms since epoch) |
+| `--to` | number | `summary`, `actions`, `network`, `errors`, `forms`, `navigation`, `elements`, `tabs`, `replay` | End timestamp (ms since epoch) |
+| `--limit` | number | `summary`, `actions`, `network`, `errors`, `forms`, `navigation`, `elements`, `tabs`, `replay` | Max events to output |
+
+> **Note:** `endpoints` and `dump` accept only `--format` and `--verbose`. `summary` declares all filter flags but does not apply them to its output — it always shows the full session overview.
 
 ### Command-specific flags
 

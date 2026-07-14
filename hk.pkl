@@ -43,7 +43,7 @@ hooks {
         check = "hk util check-added-large-files {{files}}"
       }
       ["trailing-whitespace"] {
-        check = "hk util trailing-whitespace --check {{files}}"
+        check = "hk util trailing-whitespace {{files}}"
       }
     }
   }

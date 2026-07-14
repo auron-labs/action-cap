@@ -6,8 +6,8 @@ How the ActionCap extension is structured and how data flows through it during r
 
 | Layer | Technology |
 |---|---|
-| UI framework | React 18 |
-| Build tool | Vite 5 + `@crxjs/vite-plugin` |
+| UI framework | React 19 |
+| Build tool | Vite 8 + `@crxjs/vite-plugin` |
 | Language | TypeScript (strict mode, ES2022) |
 | Local storage | Dexie (IndexedDB wrapper) |
 | DOM recording | rrweb + rrweb-player |
@@ -96,11 +96,11 @@ src/
 
 On init, the service worker restores an active recording from `chrome.storage.local` and re-attaches debuggers to previously tracked tabs. This handles the case where the service worker is terminated and restarted by the browser during a recording.
 
-Source: `src/background/service-worker.ts:42-54`
+Source: `src/background/service-worker.ts:42-58`
 
 ## Message API
 
-The extension communicates via `chrome.runtime.sendMessage` with these message types (defined in `src/common/types.ts:139-149`):
+The extension communicates via `chrome.runtime.sendMessage` with these message types (defined in `src/common/types.ts:139-145`):
 
 | Message type | Direction | Purpose |
 |---|---|---|
@@ -127,7 +127,7 @@ The service worker attaches `chrome.debugger` with protocol version `1.3` and en
 
 If `Network.getResponseBody` fails, the body is set to `[failed to capture response body: <error>]`.
 
-Source: `src/background/service-worker.ts:216-217, 599-766`
+Source: `src/background/service-worker.ts:220-221, 604-771`
 
 ### Firefox (webRequest)
 

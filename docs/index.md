@@ -34,3 +34,12 @@ All recorded data is stored locally in IndexedDB. Nothing is uploaded to any ser
 5. **Data Model** — understand the structure of recorded data
 6. **Development** — contribute to the project
 7. **Troubleshooting** — resolve common issues
+
+## Known limitations
+
+- **Internal browser pages** (`chrome://`, `edge://`, `about:`) cannot be recorded. Extension content scripts are blocked from injecting on these pages.
+- **Debugging banner** (Chrome/Edge): the `debugger` permission causes the browser to display a "debugging this browser" banner while recording is active. This is expected and disappears when recording stops. Firefox does not show this banner.
+- **Response body truncation**: response bodies larger than 1,000,000 characters are truncated. Binary content (images, fonts, etc.) is omitted entirely.
+- **Service worker lifecycle**: the MV3 service worker may be terminated by the browser during long recordings. ActionCap restores active recording state from `chrome.storage.local` on restart, but brief gaps are possible during reattachment.
+- **Firefox temporary add-on**: Firefox builds must be loaded as temporary add-ons, which are removed when the browser closes. There is no persistent install path from source.
+- **No remote sync**: all data is stored locally in IndexedDB. There is no cloud sync, account system, or server-side storage.

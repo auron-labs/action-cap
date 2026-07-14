@@ -1,9 +1,9 @@
 # ActionCap
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/skye-z/ActionCap/actions/workflows/ci.yaml/badge.svg)](https://github.com/skye-z/ActionCap/actions/workflows/ci.yaml)
-[![Release](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml/badge.svg)](https://github.com/skye-z/ActionCap/actions/workflows/release.yaml)
-[![Latest Release](https://img.shields.io/github/v/release/skye-z/ActionCap)](https://github.com/skye-z/ActionCap/releases)
+[![CI](https://github.com/auron-labs/action-cap/actions/workflows/ci.yaml/badge.svg)](https://github.com/auron-labs/action-cap/actions/workflows/ci.yaml)
+[![Release](https://github.com/auron-labs/action-cap/actions/workflows/release.yaml/badge.svg)](https://github.com/auron-labs/action-cap/actions/workflows/release.yaml)
+[![Latest Release](https://img.shields.io/github/v/release/auron-labs/action-cap)](https://github.com/auron-labs/action-cap/releases)
 
 A browser activity recorder for Chrome, Edge, and Firefox. ActionCap captures user actions, network traffic, and rrweb replay data, stores sessions locally in IndexedDB, and lets you inspect or export them as `.bxdac` archives.
 
