@@ -447,6 +447,9 @@ export class FirefoxNetworkCapture {
   }
 
   clear() {
+    // Firefox webRequest listeners stay registered for the extension lifetime.
+    // Stopping a recording only needs to drop in-flight per-request state so
+    // later listener callbacks cannot flush stale data into the next session.
     for (const [, streamFilter] of this.responseFilters) {
       try {
         streamFilter.disconnect()

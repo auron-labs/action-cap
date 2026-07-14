@@ -1,4 +1,28 @@
 const SENSITIVE_TOKENS = ['password', 'token', 'authorization', 'cookie', 'secret', 'phone', 'idcard']
+const MASK_PLACEHOLDER = '***'
+const MASKED_KEY_PLACEHOLDER = '[masked]'
+const UNMASKED_CONTROL_KEYS = new Set([
+  'Alt',
+  'AltGraph',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'Backspace',
+  'CapsLock',
+  'Control',
+  'Delete',
+  'End',
+  'Enter',
+  'Escape',
+  'Home',
+  'Insert',
+  'Meta',
+  'PageDown',
+  'PageUp',
+  'Shift',
+  'Tab',
+])
 
 export function shouldMaskKey(key: string | undefined | null) {
   if (!key) {
@@ -6,7 +30,19 @@ export function shouldMaskKey(key: string | undefined | null) {
   }
 
   const lowered = key.toLowerCase()
-  return SENSITIVE_TOKENS.some((token) => lowered.includes(token))
+  const normalized = lowered.replace(/[\s_-]+/g, '')
+
+  return SENSITIVE_TOKENS.some((token) => lowered.includes(token) || normalized.includes(token))
+}
+
+export function isSensitiveInputTarget(target: HTMLElement | null) {
+  const fieldName =
+    target?.getAttribute('name') ||
+    target?.getAttribute('id') ||
+    target?.getAttribute('aria-label') ||
+    ''
+
+  return (target instanceof HTMLInputElement && target.type === 'password') || shouldMaskKey(fieldName)
 }
 
 export function maskValue(value: string | undefined | null) {
@@ -14,11 +50,22 @@ export function maskValue(value: string | undefined | null) {
     return value ?? undefined
   }
 
-  if (value.length <= 6) {
-    return '*'.repeat(value.length)
+  return MASK_PLACEHOLDER
+}
+
+export function maskValueIfSensitive(target: HTMLElement | null, value: string | undefined | null) {
+  return isSensitiveInputTarget(target) ? maskValue(value) : value ?? undefined
+}
+
+export function maskPrintableKeyIfSensitive(key: string, sensitive: boolean) {
+  if (!sensitive || UNMASKED_CONTROL_KEYS.has(key) || /^F\d{1,2}$/.test(key)) {
+    return { key, masked: false }
   }
 
-  return `${value.slice(0, 2)}***${value.slice(-2)}`
+  return {
+    key: MASKED_KEY_PLACEHOLDER,
+    masked: true,
+  }
 }
 
 export function sanitizeHeaders(headers: Record<string, unknown> | undefined) {
@@ -29,7 +76,7 @@ export function sanitizeHeaders(headers: Record<string, unknown> | undefined) {
   return Object.fromEntries(
     Object.entries(headers).map(([key, value]) => {
       if (shouldMaskKey(key)) {
-        return [key, '***']
+        return [key, MASK_PLACEHOLDER]
       }
 
       return [key, String(value)]

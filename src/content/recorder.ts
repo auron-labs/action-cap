@@ -1,6 +1,6 @@
 import { record } from 'rrweb'
 import { buildStableSelector, summarizeElementText } from '../common/selectors'
-import { maskValue, shouldMaskKey } from '../common/sanitizer'
+import { isSensitiveInputTarget, maskPrintableKeyIfSensitive, maskValueIfSensitive } from '../common/sanitizer'
 import type { ReplayEventRecord, RuntimeResponse, UserActionEvent } from '../common/types'
 
 let stopRecordingFn: (() => void) | null = null
@@ -71,7 +71,7 @@ function extractElementSnapshot(target: EventTarget | null) {
     selector: buildStableSelector(element),
     element: {
       tagName: element.tagName.toLowerCase(),
-      text: summarizeElementText(element),
+      text: maskValueIfSensitive(htmlElement, summarizeElementText(element)),
       id: htmlElement.id || undefined,
       className: typeof htmlElement.className === 'string' ? htmlElement.className : undefined,
       role: htmlElement.getAttribute('role') || undefined,
@@ -81,17 +81,9 @@ function extractElementSnapshot(target: EventTarget | null) {
 }
 
 function maskIfNeeded(target: HTMLElement | null, value: string) {
-  const fieldName =
-    target?.getAttribute('name') ||
-    target?.getAttribute('id') ||
-    target?.getAttribute('aria-label') ||
-    ''
-  const isPassword = target instanceof HTMLInputElement && target.type === 'password'
-  const shouldMask = isPassword || shouldMaskKey(fieldName)
-
   return {
-    value: shouldMask ? maskValue(value) : value,
-    masked: shouldMask,
+    value: maskValueIfSensitive(target, value) ?? value,
+    masked: isSensitiveInputTarget(target),
   }
 }
 
@@ -120,6 +112,25 @@ function stopHrefWatcher() {
   if (hrefWatcher != null) {
     clearInterval(hrefWatcher)
     hrefWatcher = null
+  }
+}
+
+export function installNavigationListeners(onNavigation: () => void) {
+  const onLocationChange = () => {
+    if (location.href === lastUrl) {
+      return
+    }
+
+    lastUrl = location.href
+    onNavigation()
+  }
+
+  window.addEventListener('popstate', onLocationChange)
+  window.addEventListener('hashchange', onLocationChange)
+
+  return () => {
+    window.removeEventListener('popstate', onLocationChange)
+    window.removeEventListener('hashchange', onLocationChange)
   }
 }
 
@@ -166,10 +177,15 @@ function installSemanticListeners() {
   }
 
   const onKey = (event: KeyboardEvent) => {
+    const target = event.target instanceof HTMLElement ? event.target : null
+    const maskedKey = maskPrintableKeyIfSensitive(event.key, isSensitiveInputTarget(target))
     sendUserAction(
       makeActionEvent(event.type as UserActionEvent['type'], {
         ...extractElementSnapshot(event.target),
-        metadata: { key: event.key },
+        // Keep printable keys for non-sensitive fields so normal typing still records,
+        // while preserving non-printing keys on sensitive fields for navigation fidelity.
+        metadata: { key: maskedKey.key },
+        masked: maskedKey.masked,
       }),
     )
   }
@@ -182,6 +198,10 @@ function installSemanticListeners() {
     )
   }
 
+  const cleanupNavigation = installNavigationListeners(() => {
+    sendUserAction(makeActionEvent('navigation'))
+  })
+
   document.addEventListener('click', onPointerEvent, true)
   document.addEventListener('dblclick', onPointerEvent, true)
   document.addEventListener('contextmenu', onPointerEvent, true)
@@ -193,14 +213,6 @@ function installSemanticListeners() {
   document.addEventListener('focus', onFocus, true)
   document.addEventListener('blur', onFocus, true)
   window.addEventListener('scroll', onScroll, true)
-  window.addEventListener('popstate', () => {
-    lastUrl = location.href
-    sendUserAction(makeActionEvent('navigation'))
-  })
-  window.addEventListener('hashchange', () => {
-    lastUrl = location.href
-    sendUserAction(makeActionEvent('navigation'))
-  })
 
   return () => {
     document.removeEventListener('click', onPointerEvent, true)
@@ -214,6 +226,7 @@ function installSemanticListeners() {
     document.removeEventListener('focus', onFocus, true)
     document.removeEventListener('blur', onFocus, true)
     window.removeEventListener('scroll', onScroll, true)
+    cleanupNavigation()
   }
 }
 

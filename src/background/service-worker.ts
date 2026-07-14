@@ -50,6 +50,10 @@ async function init() {
   activeRecording = restored
   activeRecording.status = 'recording'
 
+  if (IS_FIREFOX && activeRecording.trackedTabIds.length > 0) {
+    initFirefoxNetworkCapture()
+  }
+
   await Promise.all(activeRecording.trackedTabIds.map((tabId) => maybeAttachDebugger(tabId)))
 }
 
