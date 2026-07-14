@@ -1,6 +1,6 @@
 import { Fragment, type JSX, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import rrwebPlayer from 'rrweb-player'
-import { applyDocumentLocale, getLocaleTag, t } from '../common/i18n'
+import { applyDocumentLocale, getLocaleTag, localizeImportErrorMessage, t } from '../common/i18n'
 import { buildSessionArchive, db, getSessionBundle, importSessionArchive, listSessions } from '../common/storage'
 import { getScopeLabel, getSessionDisplayName } from '../common/session-utils'
 import type {
@@ -683,7 +683,7 @@ export function ResultsApp() {
       selectSession(importedSessionId)
       reload()
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : t('import_failed'))
+      window.alert(error instanceof Error ? localizeImportErrorMessage(error.message) : t('import_failed'))
     }
   }
 

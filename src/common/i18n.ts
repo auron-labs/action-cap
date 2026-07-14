@@ -107,6 +107,10 @@ const messages = {
     import_failed: '导入失败，请检查文件内容',
     import_invalid_format: '导入文件格式无效',
     import_missing_session: '导入文件缺少会话信息',
+    import_validation_failed: '导入校验失败：{field}{reason}',
+    import_validation_reason_required: '为必填项。',
+    import_validation_reason_non_empty_string: '必须是非空字符串。',
+    import_validation_reason_finite_number: '必须是有限数字。',
     error_recording_already_active: '已有录制任务正在进行中。',
     error_no_active_tab: '未找到当前活动 Tab。',
     error_no_active_recording: '当前没有正在录制的会话。',
@@ -228,6 +232,10 @@ const messages = {
     import_failed: 'Import failed. Please check the file content.',
     import_invalid_format: 'Invalid import file format',
     import_missing_session: 'Import file is missing session metadata',
+    import_validation_failed: 'Import validation failed: {field}{reason}',
+    import_validation_reason_required: ' is required.',
+    import_validation_reason_non_empty_string: ' must be a non-empty string.',
+    import_validation_reason_finite_number: ' must be a finite number.',
     error_recording_already_active: 'Recording is already active.',
     error_no_active_tab: 'No active tab found.',
     error_no_active_recording: 'No active recording session.',
@@ -289,4 +297,23 @@ export function tForLocale(locale: AppLocale, key: MessageKey, vars?: Record<str
 
 export function t(key: MessageKey, vars?: Record<string, string | number>) {
   return tForLocale(getPreferredLocale(), key, vars)
+}
+
+const importValidationReasons = {
+  'is required': 'import_validation_reason_required',
+  'must be a non-empty string': 'import_validation_reason_non_empty_string',
+  'must be a finite number': 'import_validation_reason_finite_number',
+} as const satisfies Record<string, MessageKey>
+
+export function localizeImportErrorMessage(message: string) {
+  const match = /^Import validation failed: (?<field>.+) (?<reason>is required|must be a non-empty string|must be a finite number)\.$/.exec(message)
+  if (!match?.groups) return message
+
+  const reasonKey = importValidationReasons[match.groups.reason as keyof typeof importValidationReasons]
+  if (!reasonKey) return message
+
+  return t('import_validation_failed', {
+    field: match.groups.field,
+    reason: t(reasonKey),
+  })
 }

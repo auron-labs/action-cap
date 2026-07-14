@@ -46,29 +46,57 @@ type SessionArchive = {
   bundle: SessionBundle
 }
 
+const SESSION_ARCHIVE_FORMAT = 'actioncap-session-archive'
+const SESSION_ARCHIVE_VERSION = 1
+
+// Import validation stays local to the extension instead of pulling in Zod from
+// the CLI package. The archive checks here are small, bundle-sensitive, and do
+// not justify adding a runtime schema dependency to the shipped extension.
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function normalizeSessionBundle(bundle: unknown): SessionBundle {
+function getBundleArray<T>(record: Record<string, unknown>, key: string, strict: boolean): T[] {
+  const value = record[key]
+  if (value === undefined) return []
+  if (Array.isArray(value)) return value as T[]
+  if (strict) {
+    throw new Error(t('import_invalid_format'))
+  }
+  return []
+}
+
+function normalizeSessionBundle(bundle: unknown, strict = false): SessionBundle {
   const record = isRecord(bundle) ? bundle : {}
   return {
     session: isRecord(record.session) ? (record.session as unknown as SessionRecord) : undefined,
-    tabs: Array.isArray(record.tabs) ? (record.tabs as TrackedTabRecord[]) : [],
-    userActions: Array.isArray(record.userActions) ? (record.userActions as UserActionEvent[]) : [],
-    networkEvents: Array.isArray(record.networkEvents) ? (record.networkEvents as NetworkEvent[]) : [],
-    replayEvents: Array.isArray(record.replayEvents) ? (record.replayEvents as ReplayEventRecord[]) : [],
+    tabs: getBundleArray<TrackedTabRecord>(record, 'tabs', strict),
+    userActions: getBundleArray<UserActionEvent>(record, 'userActions', strict),
+    networkEvents: getBundleArray<NetworkEvent>(record, 'networkEvents', strict),
+    replayEvents: getBundleArray<ReplayEventRecord>(record, 'replayEvents', strict),
   }
 }
 
 function asSessionBundle(payload: unknown): SessionBundle {
-  if (isRecord(payload) && 'bundle' in payload && isRecord(payload.bundle)) {
-    return normalizeSessionBundle(payload.bundle)
+  if (!isRecord(payload)) {
+    throw new Error(t('import_invalid_format'))
   }
-  if (isRecord(payload)) {
-    return normalizeSessionBundle(payload)
+
+  if ('bundle' in payload || 'format' in payload || 'version' in payload) {
+    if (
+      payload.format !== SESSION_ARCHIVE_FORMAT
+      || payload.version !== SESSION_ARCHIVE_VERSION
+      || !isRecord(payload.bundle)
+    ) {
+      throw new Error(t('import_invalid_format'))
+    }
+
+    return normalizeSessionBundle(payload.bundle, true)
   }
-  throw new Error(t('import_invalid_format'))
+
+  // Raw bundle imports are intentionally kept for backward compatibility with
+  // older exports that predate the archive wrapper.
+  return normalizeSessionBundle(payload)
 }
 
 function getImportedSession(bundle: SessionBundle) {
@@ -77,6 +105,58 @@ function getImportedSession(bundle: SessionBundle) {
     throw new Error(t('import_missing_session'))
   }
   return session as SessionRecord
+}
+
+function failImportValidation(field: string, reason: string): never {
+  throw new Error(`Import validation failed: ${field} ${reason}.`)
+}
+
+function requireStringField(value: unknown, field: string) {
+  if (typeof value !== 'string' || value.length === 0) {
+    failImportValidation(field, 'must be a non-empty string')
+  }
+}
+
+function requireNumberField(value: unknown, field: string) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    failImportValidation(field, 'must be a finite number')
+  }
+}
+
+function validateImportedBundle(bundle: SessionBundle, session: SessionRecord) {
+  requireStringField(session.id, 'session.id')
+  requireStringField(session.status, 'session.status')
+  requireStringField(session.scope, 'session.scope')
+  requireNumberField(session.startTime, 'session.startTime')
+
+  for (const [index, item] of bundle.tabs.entries()) {
+    requireNumberField(item.tabId, `tabs[${index}].tabId`)
+    requireNumberField(item.windowId, `tabs[${index}].windowId`)
+    requireNumberField(item.firstSeenAt, `tabs[${index}].firstSeenAt`)
+    requireNumberField(item.lastSeenAt, `tabs[${index}].lastSeenAt`)
+  }
+
+  for (const [index, item] of bundle.userActions.entries()) {
+    requireNumberField(item.tabId, `userActions[${index}].tabId`)
+    requireNumberField(item.ts, `userActions[${index}].ts`)
+    requireStringField(item.type, `userActions[${index}].type`)
+  }
+
+  for (const [index, item] of bundle.networkEvents.entries()) {
+    requireNumberField(item.tabId, `networkEvents[${index}].tabId`)
+    requireStringField(item.requestId, `networkEvents[${index}].requestId`)
+    requireNumberField(item.ts, `networkEvents[${index}].ts`)
+    requireStringField(item.phase, `networkEvents[${index}].phase`)
+    requireStringField(item.url, `networkEvents[${index}].url`)
+  }
+
+  for (const [index, item] of bundle.replayEvents.entries()) {
+    requireNumberField(item.tabId, `replayEvents[${index}].tabId`)
+    requireNumberField(item.ts, `replayEvents[${index}].ts`)
+    if (item.payload === undefined) {
+      failImportValidation(`replayEvents[${index}].payload`, 'is required')
+    }
+  }
 }
 
 function getLatestTimestamp(bundle: SessionBundle, session: SessionRecord) {
@@ -103,8 +183,8 @@ function buildImportedTabs(bundle: SessionBundle, sessionId: string) {
 
 export function buildSessionArchive(bundle: SessionBundle): SessionArchive {
   return {
-    format: 'actioncap-session-archive',
-    version: 1,
+    format: SESSION_ARCHIVE_FORMAT,
+    version: SESSION_ARCHIVE_VERSION,
     exportedAt: Date.now(),
     bundle,
   }
@@ -113,6 +193,7 @@ export function buildSessionArchive(bundle: SessionBundle): SessionArchive {
 export async function importSessionArchive(payload: unknown) {
   const bundle = asSessionBundle(payload)
   const session = getImportedSession(bundle)
+  validateImportedBundle(bundle, session)
   const importedSessionId = crypto.randomUUID()
   const tabs = buildImportedTabs(bundle, importedSessionId)
   const userActions: UserActionEvent[] = bundle.userActions.map((item) => ({
