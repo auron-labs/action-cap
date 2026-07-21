@@ -1,12 +1,22 @@
 import { record } from 'rrweb'
 import { buildStableSelector, summarizeElementText } from '../common/selectors'
 import { isSensitiveInputTarget, maskPrintableKeyIfSensitive, maskValueIfSensitive } from '../common/sanitizer'
+import { installBridge } from './bridge'
 import type { ReplayEventRecord, RuntimeResponse, UserActionEvent } from '../common/types'
 
 let stopRecordingFn: (() => void) | null = null
 let sessionId: string | null = null
 let hrefWatcher: number | null = null
 let lastUrl = location.href
+
+function getBridgeState() {
+  return {
+    recording: stopRecordingFn !== null,
+    sessionId,
+  }
+}
+
+void installBridge(getBridgeState)
 
 function makeActionEvent(
   type: UserActionEvent['type'],
