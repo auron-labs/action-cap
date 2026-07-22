@@ -148,6 +148,26 @@ export type RuntimeResponse =
   | { ok: true; state?: RecordingStateSnapshot; shouldRecord?: boolean; sessionId?: string }
   | { ok: false; error: string }
 
+export type ExternalActionInput = {
+  type: ActionType
+  url?: string
+  title?: string
+  selector?: string
+  element?: ElementSnapshot
+  coordinates?: { x: number; y: number }
+  scroll?: { x: number; y: number }
+  value?: string
+  masked?: boolean
+  metadata?: Record<string, string | number | boolean | undefined>
+}
+
+export type ExternalMessage =
+  | { type: 'GET_RECORDING_STATE' }
+  | { type: 'START_RECORDING'; scope: RecordingScope; restart?: boolean }
+  | { type: 'STOP_RECORDING'; openResults?: boolean }
+  | { type: 'INGEST_ACTION'; event: ExternalActionInput }
+  | { type: 'INGEST_REPLAY'; payload: unknown }
+
 export interface SessionBundle {
   session?: SessionRecord
   tabs: TrackedTabRecord[]

@@ -252,3 +252,13 @@ export async function getSessionBundle(sessionId: string): Promise<SessionBundle
 export async function listSessions() {
   return db.sessions.orderBy('startTime').reverse().toArray()
 }
+
+export async function clearAllSessions() {
+  await db.transaction('rw', [db.sessions, db.tabs, db.userActions, db.networkEvents, db.replayEvents], async () => {
+    await db.sessions.clear()
+    await db.tabs.clear()
+    await db.userActions.clear()
+    await db.networkEvents.clear()
+    await db.replayEvents.clear()
+  })
+}

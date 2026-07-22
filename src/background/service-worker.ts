@@ -8,6 +8,8 @@ import { FirefoxNetworkCapture } from '../common/firefox-network-capture'
 
 import type {
   ActiveRecordingState,
+  ExternalActionInput,
+  ExternalMessage,
   NetworkEvent,
   RecordingScope,
   RecordingStateSnapshot,
@@ -18,6 +20,21 @@ import type {
   TrackedTabRecord,
   UserActionEvent,
 } from '../common/types'
+
+const ALLOWED_EXTERNAL_ACTION_TYPES: ReadonlySet<string> = new Set([
+  'click',
+  'dblclick',
+  'contextmenu',
+  'input',
+  'change',
+  'submit',
+  'keydown',
+  'keyup',
+  'scroll',
+  'focus',
+  'blur',
+  'navigation',
+])
 
 type RequestContext = {
   startedAt: number
@@ -350,7 +367,7 @@ async function startRecording(scope: RecordingScope) {
   return { ok: true, state: makeStateSnapshot() } satisfies RuntimeResponse
 }
 
-async function stopRecording() {
+async function stopRecording(openResults = true) {
   if (!activeRecording) {
     return { ok: false, error: t('error_no_active_recording') } satisfies RuntimeResponse
   }
@@ -380,14 +397,17 @@ async function stopRecording() {
   requestContexts.clear()
   firefoxNetworkCapture?.clear()
   await persistActiveState()
-  try {
-    await chrome.tabs.create({
-      windowId: finalState.startWindowId,
-      url: resultUrl,
-      active: true,
-    })
-  } catch {
-    await chrome.tabs.create({ url: resultUrl, active: true })
+
+  if (openResults) {
+    try {
+      await chrome.tabs.create({
+        windowId: finalState.startWindowId,
+        url: resultUrl,
+        active: true,
+      })
+    } catch {
+      await chrome.tabs.create({ url: resultUrl, active: true })
+    }
   }
 
   return { ok: true, state: makeStateSnapshot() } satisfies RuntimeResponse
@@ -415,6 +435,31 @@ async function recordSystemAction(
   }
 
   await recordUserAction(event)
+}
+
+function buildExternalActionEvent(
+  input: ExternalActionInput,
+  tabId: number,
+  frameId: number,
+  senderTab?: chrome.tabs.Tab,
+): UserActionEvent {
+  return {
+    id: crypto.randomUUID(),
+    sessionId: activeRecording!.sessionId,
+    tabId,
+    frameId,
+    ts: Date.now(),
+    type: input.type,
+    url: input.url ?? senderTab?.url ?? '',
+    title: input.title ?? senderTab?.title,
+    selector: input.selector,
+    element: input.element,
+    coordinates: input.coordinates,
+    scroll: input.scroll,
+    value: input.value,
+    masked: input.masked,
+    metadata: input.metadata,
+  }
 }
 
 chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender, sendResponse) => {
@@ -478,6 +523,84 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender, sendRespo
       }
       default:
         sendResponse({ ok: false, error: 'Unsupported message.' } satisfies RuntimeResponse)
+    }
+  })()
+
+  return true
+})
+
+chrome.runtime.onMessageExternal.addListener((message: ExternalMessage, sender, sendResponse) => {
+  void (async () => {
+    const senderTabId = sender.tab?.id
+    const senderFrameId = sender.frameId ?? 0
+
+    switch (message.type) {
+      case 'GET_RECORDING_STATE': {
+        sendResponse({ ok: true, state: makeStateSnapshot() } satisfies RuntimeResponse)
+        return
+      }
+      case 'START_RECORDING': {
+        if (activeRecording) {
+          if (!message.restart) {
+            sendResponse({ ok: false, error: t('error_recording_already_active') } satisfies RuntimeResponse)
+            return
+          }
+
+          // Restart: stop the current recording without opening the results
+          // page, then start a fresh session with the requested scope.
+          await stopRecording(false)
+        }
+
+        sendResponse(await startRecording(message.scope))
+        return
+      }
+      case 'STOP_RECORDING': {
+        sendResponse(await stopRecording(message.openResults ?? true))
+        return
+      }
+      case 'INGEST_ACTION': {
+        if (!activeRecording) {
+          sendResponse({ ok: false, error: 'Not recording' } satisfies RuntimeResponse)
+          return
+        }
+
+        if (!ALLOWED_EXTERNAL_ACTION_TYPES.has(message.event.type)) {
+          sendResponse({ ok: false, error: `Unsupported action type: ${message.event.type}` } satisfies RuntimeResponse)
+          return
+        }
+
+        if (senderTabId == null) {
+          sendResponse({ ok: false, error: 'Missing sender tab id.' } satisfies RuntimeResponse)
+          return
+        }
+
+        await recordUserAction(buildExternalActionEvent(message.event, senderTabId, senderFrameId, sender.tab))
+        sendResponse({ ok: true, sessionId: activeRecording.sessionId } satisfies RuntimeResponse)
+        return
+      }
+      case 'INGEST_REPLAY': {
+        if (!activeRecording) {
+          sendResponse({ ok: false, error: 'Not recording' } satisfies RuntimeResponse)
+          return
+        }
+
+        if (senderTabId == null) {
+          sendResponse({ ok: false, error: 'Missing sender tab id.' } satisfies RuntimeResponse)
+          return
+        }
+
+        await recordReplayEvent({
+          id: crypto.randomUUID(),
+          sessionId: activeRecording.sessionId,
+          tabId: senderTabId,
+          ts: Date.now(),
+          payload: message.payload,
+        })
+        sendResponse({ ok: true, sessionId: activeRecording.sessionId } satisfies RuntimeResponse)
+        return
+      }
+      default:
+        sendResponse({ ok: false, error: 'Unsupported external message.' } satisfies RuntimeResponse)
     }
   })()
 

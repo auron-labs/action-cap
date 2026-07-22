@@ -1,7 +1,7 @@
 import { Fragment, type JSX, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import rrwebPlayer from 'rrweb-player'
 import { applyDocumentLocale, getLocaleTag, localizeImportErrorMessage, t } from '../common/i18n'
-import { buildSessionArchive, db, getSessionBundle, importSessionArchive, listSessions } from '../common/storage'
+import { buildSessionArchive, clearAllSessions, db, getSessionBundle, importSessionArchive, listSessions } from '../common/storage'
 import { getScopeLabel, getSessionDisplayName } from '../common/session-utils'
 import type {
   NetworkEvent,
@@ -521,6 +521,60 @@ function PayloadModal({ payload, onClose }: { payload: PayloadModalState; onClos
   )
 }
 
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  busyLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  message: string
+  confirmLabel: string
+  cancelLabel: string
+  busyLabel: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) onCancel()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onCancel, busy])
+
+  const handleConfirm = async () => {
+    setBusy(true)
+    try {
+      await onConfirm()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="payload-modal-backdrop" onClick={() => { if (!busy) onCancel() }} role="presentation">
+      <div className="payload-modal-card confirm-modal-card" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="payload-modal-header">
+          <div>
+            <h3>{title}</h3>
+            <p className="confirm-modal-message">{message}</p>
+          </div>
+        </div>
+        <div className="confirm-modal-actions">
+          <button type="button" className="ghost" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
+          <button type="button" className="danger" onClick={handleConfirm} disabled={busy}>{busy ? busyLabel : confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ActionDetail({ event }: { event: UserActionEvent }) {
   return (
     <div className="detail-panel">
@@ -604,6 +658,7 @@ export function ResultsApp() {
   const [renaming, setRenaming] = useState(false)
   const [draftSessionName, setDraftSessionName] = useState('')
   const [payloadModal, setPayloadModal] = useState<PayloadModalState | null>(null)
+  const [showCleanModal, setShowCleanModal] = useState(false)
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const { bundle, sessions, reload } = useSessionData(sessionId)
   const deferredSearch = useDeferredValue(search)
@@ -701,6 +756,13 @@ export function ResultsApp() {
     reload()
   }
 
+  const onCleanAll = async () => {
+    await clearAllSessions()
+    setShowCleanModal(false)
+    selectSession(null)
+    reload()
+  }
+
   return (
     <>
       <div className="results-shell">
@@ -730,7 +792,7 @@ export function ResultsApp() {
             </>
           ) : (
             <div className="session-browser">
-              <header className="toolbar session-toolbar"><div><p className="eyebrow">{t('sessions_header')}</p><h2>{t('sessions_list_title')}</h2><span>{t('sessions_count', { filtered: filteredSessions.length, total: sessions.length })}</span></div><div className="toolbar-actions"><input value={sessionSearch} onChange={(event) => setSessionSearch(event.target.value)} placeholder={t('session_search_placeholder')} /><button className="ghost" onClick={onOpenImport}>{t('action_import')}</button></div></header>
+              <header className="toolbar session-toolbar"><div><p className="eyebrow">{t('sessions_header')}</p><h2>{t('sessions_list_title')}</h2><span>{t('sessions_count', { filtered: filteredSessions.length, total: sessions.length })}</span></div><div className="toolbar-actions"><input value={sessionSearch} onChange={(event) => setSessionSearch(event.target.value)} placeholder={t('session_search_placeholder')} /><button className="ghost" onClick={onOpenImport}>{t('action_import')}</button>{sessions.length ? <button className="danger" onClick={() => setShowCleanModal(true)}>{t('action_clean_all')}</button> : null}</div></header>
               {filteredSessions.length ? <section className="session-grid">{filteredSessions.map((item) => <button key={item.id} className="session-browser-card" onClick={() => selectSession(item.id)}><div className="session-browser-head"><span className="kind-pill action">{getScopeLabel(item.scope)}</span><small>{formatDate(item.startTime)}</small></div><strong>{getSessionDisplayName(item)}</strong><p>{getSessionOverviewMeta(item)}</p></button>)}</section> : <div className="empty-state">{t('no_matching_sessions')}</div>}
             </div>
           )}
@@ -738,6 +800,7 @@ export function ResultsApp() {
       </div>
       <input ref={importInputRef} type="file" accept=".bxdac,.json,application/json" hidden onChange={onImport} />
       {payloadModal ? <PayloadModal payload={payloadModal} onClose={() => setPayloadModal(null)} /> : null}
+      {showCleanModal ? <ConfirmModal title={t('clean_all_title')} message={t('clean_all_message', { count: sessions.length })} confirmLabel={t('action_clean_all')} cancelLabel={t('action_cancel')} busyLabel={t('action_processing')} onConfirm={onCleanAll} onCancel={() => setShowCleanModal(false)} /> : null}
     </>
   )
 }

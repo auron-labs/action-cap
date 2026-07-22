@@ -58,6 +58,9 @@ const manifest = defineManifest({
       matches: ['<all_urls>'],
     },
   ],
+  externally_connectable: {
+    ids: ['*'],
+  },
 })
 
 if (TARGET_BROWSER === 'firefox') {
