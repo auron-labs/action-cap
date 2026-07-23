@@ -39,7 +39,7 @@
     "automd": "automd"
   },
   "dependencies": {
-    "@toon-format/toon": "^2.3.0",
+    "@toon-format/toon": "^4.0.0",
     "citty": "^0.2.2",
     "cli-table3": "^0.6.5",
     "consola": "^3.4.2",
