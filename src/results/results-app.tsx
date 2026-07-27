@@ -53,6 +53,24 @@ const PAYLOAD_MODAL_THRESHOLD_BYTES = 1024
 const REPLAY_CONTROLLER_HEIGHT = 80
 const REPLAY_VIEWPORT_WIDTH_OFFSET = 360
 const REPLAY_VIEWPORT_HEIGHT_OFFSET = 300
+const REDACT_PLACEHOLDER = '⟪REDACTED⟫'
+
+function redactStringInJson(value: unknown, target: string, placeholder: string): unknown {
+  if (typeof value === 'string') {
+    return value.split(target).join(placeholder)
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactStringInJson(item, target, placeholder))
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = redactStringInJson(entry, target, placeholder)
+    }
+    return result
+  }
+  return value
+}
 
 function formatDate(ts?: number) {
   if (!ts) return '--'
@@ -659,6 +677,7 @@ export function ResultsApp() {
   const [draftSessionName, setDraftSessionName] = useState('')
   const [payloadModal, setPayloadModal] = useState<PayloadModalState | null>(null)
   const [showCleanModal, setShowCleanModal] = useState(false)
+  const [redactValue, setRedactValue] = useState('')
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const { bundle, sessions, reload } = useSessionData(sessionId)
   const deferredSearch = useDeferredValue(search)
@@ -712,7 +731,13 @@ export function ResultsApp() {
 
   const onExport = async () => {
     if (!sessionId) return
-    const json = JSON.stringify(buildSessionArchive(bundle), null, 2)
+    const archive = buildSessionArchive(bundle)
+    const target = redactValue
+    const json = JSON.stringify(
+      target ? redactStringInJson(archive, target, REDACT_PLACEHOLDER) : archive,
+      null,
+      2,
+    )
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -780,7 +805,7 @@ export function ResultsApp() {
                   {renaming ? <div className="rename-row"><input value={draftSessionName} onChange={(event) => setDraftSessionName(event.target.value)} placeholder={t('rename_placeholder')} /><button onClick={onRename}>{t('action_save')}</button><button className="ghost" onClick={() => { setDraftSessionName(getSessionDisplayName(session)); setRenaming(false) }}>{t('action_cancel')}</button></div> : <h2>{getSessionDisplayName(session)}</h2>}
                   <span>{formatDate(session.startTime)} · {formatDuration(session.startTime, session.endTime)} · {getScopeLabel(session.scope)}</span>
                 </div>
-                <div className="toolbar-actions">{view === 'timeline' ? <><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('search_timeline_placeholder')} /><select value={filter} onChange={(event) => setFilter(event.target.value as FilterKind)}><option value="all">{t('filter_all')}</option><option value="actions">{t('filter_actions')}</option><option value="network">{t('filter_network')}</option><option value="errors">{t('filter_errors')}</option></select></> : null}<button className="ghost" onClick={() => setRenaming((value) => !value)}>{renaming ? t('action_close_rename') : t('action_rename')}</button><button className="ghost" onClick={onOpenImport}>{t('action_import')}</button><button onClick={onExport}>{t('action_export')}</button><button className="danger" onClick={onDelete}>{t('action_delete_session')}</button></div>
+                <div className="toolbar-actions">{view === 'timeline' ? <><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('search_timeline_placeholder')} /><select value={filter} onChange={(event) => setFilter(event.target.value as FilterKind)}><option value="all">{t('filter_all')}</option><option value="actions">{t('filter_actions')}</option><option value="network">{t('filter_network')}</option><option value="errors">{t('filter_errors')}</option></select></> : null}<button className="ghost" onClick={() => setRenaming((value) => !value)}>{renaming ? t('action_close_rename') : t('action_rename')}</button><button className="ghost" onClick={onOpenImport}>{t('action_import')}</button><label className="toolbar-redact" title={t('redact_label')}><span className="visually-hidden">{t('redact_label')}</span><input value={redactValue} onChange={(event) => setRedactValue(event.target.value)} placeholder={t('redact_placeholder')} /></label><button onClick={onExport} disabled={!redactValue.trim()} title={t('action_export')}>{t('action_export')}</button><button className="danger" onClick={onDelete}>{t('action_delete_session')}</button></div>
               </header>
 
               <section className="results-content-nav">
