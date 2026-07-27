@@ -12,7 +12,12 @@ type ListenerCallback<T> = (details: T) => void
 
 type FakeListener<T> = {
   callback: ListenerCallback<T> | null
-  addListener(callback: ListenerCallback<T>): void
+  extraInfoSpec?: string[]
+  addListener(
+    callback: ListenerCallback<T>,
+    filter?: { urls: string[]; types?: string[] },
+    extraInfoSpec?: string[],
+  ): void
 }
 
 type FakeFilter = {
@@ -31,8 +36,9 @@ type FakeFilter = {
 function createListener<T>(): FakeListener<T> {
   return {
     callback: null,
-    addListener(callback) {
+    addListener(callback, _filter, extraInfoSpec) {
       this.callback = callback
+      this.extraInfoSpec = extraInfoSpec
     },
   }
 }
@@ -54,7 +60,7 @@ function decodeChunks(chunks: Uint8Array[]): string {
   return new TextDecoder().decode(combined)
 }
 
-function createFakeBrowser() {
+function createFakeBrowser(options: { filterResponseDataThrows?: boolean } = {}) {
   const listeners = {
     onBeforeRequest: createListener<any>(),
     onSendHeaders: createListener<any>(),
@@ -69,6 +75,10 @@ function createFakeBrowser() {
       webRequest: {
         ...listeners,
         filterResponseData(requestId: string) {
+          if (options.filterResponseDataThrows) {
+            throw new Error('filterResponseData unavailable')
+          }
+
           const filter: FakeFilter = {
             onstart: null,
             ondata: null,
@@ -134,6 +144,8 @@ test('FirefoxNetworkCapture writes chunks through immediately and waits for onst
   try {
     capture.start()
 
+    assert.deepEqual(fakeBrowser.listeners.onBeforeRequest.extraInfoSpec, ['blocking', 'requestBody'])
+
     fakeBrowser.listeners.onBeforeRequest.callback?.({
       requestId: 'request-1',
       tabId: 7,
@@ -147,10 +159,9 @@ test('FirefoxNetworkCapture writes chunks through immediately and waits for onst
       url: 'https://example.com/data.txt',
       method: 'GET',
       type: 'xmlhttprequest',
-      mimeType: 'text/plain',
       statusCode: 200,
       statusLine: 'HTTP/1.1 200 OK',
-      responseHeaders: [],
+      responseHeaders: [{ name: 'Content-Type', value: 'text/plain; charset=utf-8' }],
     })
 
     const filter = fakeBrowser.filters.get('request-1')
@@ -178,6 +189,7 @@ test('FirefoxNetworkCapture writes chunks through immediately and waits for onst
     assert.equal(events.length, 1)
     assert.equal(events[0]?.phase, 'response')
     assert.equal(events[0]?.responseBody, 'hello world')
+    assert.equal(events[0]?.mimeType, 'text/plain')
     assert.equal(events[0]?.truncated, false)
   } finally {
     if (originalBrowser === undefined) {
@@ -299,10 +311,9 @@ test('FirefoxNetworkCapture streams large binary responses through and drops ret
       url: 'https://example.com/image.png',
       method: 'GET',
       type: 'image',
-      mimeType: 'image/png',
       statusCode: 200,
       statusLine: 'HTTP/1.1 200 OK',
-      responseHeaders: [],
+      responseHeaders: [{ name: 'content-type', value: 'image/png' }],
     })
 
     const postClassificationState = (capture as any).responseStates.get(responseKey)
@@ -500,4 +511,51 @@ test('FirefoxNetworkCapture completion finalization without a filter clears rema
   assert.equal((capture as any).responseStates.size, 0)
   assert.equal((capture as any).requestContexts.size, 0)
   assert.equal((capture as any).pendingResponseFinalizations.size, 0)
+})
+
+test('FirefoxNetworkCapture keeps response metadata when filter setup fails', async () => {
+  const originalBrowser = (globalThis as { browser?: unknown }).browser
+  const fakeBrowser = createFakeBrowser({ filterResponseDataThrows: true })
+  ;(globalThis as { browser?: unknown }).browser = fakeBrowser.browser
+
+  const events: Array<Record<string, unknown>> = []
+  const capture = new FirefoxNetworkCapture(async (event) => {
+    events.push(event as unknown as Record<string, unknown>)
+  }, () => true, () => 'session-1')
+
+  try {
+    capture.start()
+
+    fakeBrowser.listeners.onBeforeRequest.callback?.({
+      requestId: 'request-filter-failure',
+      tabId: 13,
+      url: 'https://example.com/fallback.json',
+      method: 'GET',
+      type: 'xmlhttprequest',
+    })
+    fakeBrowser.listeners.onHeadersReceived.callback?.({
+      requestId: 'request-filter-failure',
+      tabId: 13,
+      url: 'https://example.com/fallback.json',
+      method: 'GET',
+      type: 'xmlhttprequest',
+      statusCode: 200,
+      statusLine: 'HTTP/1.1 200 OK',
+      responseHeaders: [{ name: 'Content-Type', value: 'application/json; charset=utf-8' }],
+    })
+    fakeBrowser.listeners.onCompleted.callback?.({ requestId: 'request-filter-failure', tabId: 13 })
+    await Promise.resolve()
+
+    assert.equal(events.length, 1)
+    assert.equal(events[0]?.phase, 'response')
+    assert.equal(events[0]?.status, 200)
+    assert.equal(events[0]?.mimeType, 'application/json')
+    assert.equal(events[0]?.responseBody, undefined)
+  } finally {
+    if (originalBrowser === undefined) {
+      delete (globalThis as { browser?: unknown }).browser
+    } else {
+      ;(globalThis as { browser?: unknown }).browser = originalBrowser
+    }
+  }
 })

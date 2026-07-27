@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { extname } from 'pathe'
 import { z } from 'zod'
-import type { SessionArchive, SessionBundle } from '../types.js'
+import type { NetworkEvent, SessionArchive, SessionBundle } from '../types.js'
+
+const SENSITIVE_TOKENS = ['password', 'token', 'authorization', 'cookie', 'secret', 'phone', 'idcard']
+const MASK_PLACEHOLDER = '***'
 
 const ElementSnapshotSchema = z
   .object({
@@ -162,7 +165,37 @@ export function parseArchive(parsed: unknown, filePath?: string): SessionBundle 
   }
 
   const archive = result.data as unknown as SessionArchive
-  return archive.bundle
+  return sanitizeBundle(archive.bundle)
+}
+
+function shouldMaskHeaderName(name: string): boolean {
+  const lowered = name.toLowerCase()
+  const normalized = lowered.replace(/[\s_-]+/g, '')
+
+  return SENSITIVE_TOKENS.some((token) => lowered.includes(token) || normalized.includes(token))
+}
+
+function sanitizeHeaders(headers: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined
+
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [name, shouldMaskHeaderName(name) ? MASK_PLACEHOLDER : value]),
+  )
+}
+
+function sanitizeNetworkEvent(event: NetworkEvent): NetworkEvent {
+  return {
+    ...event,
+    requestHeaders: sanitizeHeaders(event.requestHeaders),
+    responseHeaders: sanitizeHeaders(event.responseHeaders),
+  }
+}
+
+function sanitizeBundle(bundle: SessionBundle): SessionBundle {
+  return {
+    ...bundle,
+    networkEvents: bundle.networkEvents.map(sanitizeNetworkEvent),
+  }
 }
 
 export function isArchiveFile(filePath: string): boolean {

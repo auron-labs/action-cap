@@ -106,6 +106,8 @@ export function actionTimeline(
 export interface NetworkView {
   ts: number
   tabId: number
+  requestId: string
+  phase: NetworkEvent['phase']
   method?: string
   url: string
   status?: number
@@ -115,6 +117,7 @@ export interface NetworkView {
   durationMs?: number
   requestBody?: string
   responseBody?: string
+  bodyEncoding?: NetworkEvent['bodyEncoding']
   errorText?: string
   requestHeaders?: Record<string, string>
   responseHeaders?: Record<string, string>
@@ -139,6 +142,8 @@ export function networkRequests(
   return events.map((e) => ({
     ts: e.ts,
     tabId: e.tabId,
+    requestId: e.requestId,
+    phase: e.phase,
     method: e.method,
     url: e.url,
     status: e.status,
@@ -148,6 +153,7 @@ export function networkRequests(
     durationMs: e.durationMs,
     requestBody: opts.headers ? e.requestBody : truncate(e.requestBody, maxLen),
     responseBody: opts.headers ? e.responseBody : truncate(e.responseBody, maxLen),
+    bodyEncoding: e.bodyEncoding,
     errorText: e.errorText,
     requestHeaders: opts.headers ? e.requestHeaders : undefined,
     responseHeaders: opts.headers ? e.responseHeaders : undefined,
@@ -163,6 +169,8 @@ export function networkErrors(bundle: SessionBundle): NetworkView[] {
   return events.map((e) => ({
     ts: e.ts,
     tabId: e.tabId,
+    requestId: e.requestId,
+    phase: e.phase,
     method: e.method,
     url: e.url,
     status: e.status,
@@ -172,6 +180,7 @@ export function networkErrors(bundle: SessionBundle): NetworkView[] {
     durationMs: e.durationMs,
     requestBody: e.requestBody,
     responseBody: e.responseBody,
+    bodyEncoding: e.bodyEncoding,
     errorText: e.errorText,
     requestHeaders: e.requestHeaders,
     responseHeaders: e.responseHeaders,

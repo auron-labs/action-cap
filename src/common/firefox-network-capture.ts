@@ -130,6 +130,18 @@ function headersToRecord(headers: FirefoxHeader[] | undefined): Record<string, s
   return result
 }
 
+function mimeTypeFromResponseHeaders(headers: FirefoxHeader[] | undefined): string | undefined {
+  const recordedHeaders = headersToRecord(headers)
+  if (!recordedHeaders) return undefined
+
+  const contentType = Object.entries(recordedHeaders).find(
+    ([name]) => name.toLowerCase() === 'content-type',
+  )?.[1]
+  const mimeType = contentType?.split(';', 1)[0]?.trim()
+
+  return mimeType || undefined
+}
+
 function decodeRequestBody(details: FirefoxWebRequestDetails): string | undefined {
   if (!details.requestBody) return undefined
 
@@ -258,7 +270,8 @@ export class FirefoxNetworkCapture {
         this.setupResponseFilter(details.requestId, details.tabId)
       },
       filter,
-      ['requestBody'],
+      // Firefox only permits filterResponseData() from a blocking onBeforeRequest listener.
+      ['blocking', 'requestBody'],
     )
 
     browser.webRequest.onSendHeaders.addListener(
@@ -306,11 +319,14 @@ export class FirefoxNetworkCapture {
           context.responseHeaders,
           sanitizeHeaders(headersToRecord(details.responseHeaders)),
         )
-        if (details.mimeType) {
-          context.mimeType = details.mimeType
+        // webRequest details do not reliably provide mimeType. Content-Type is the
+        // response metadata Firefox exposes for this purpose.
+        const mimeType = mimeTypeFromResponseHeaders(details.responseHeaders) ?? details.mimeType
+        if (mimeType) {
+          context.mimeType = mimeType
 
           const captureState = this.responseStates.get(key)
-          if (captureState && !isProbablyTextMimeType(details.mimeType)) {
+          if (captureState && !isProbablyTextMimeType(mimeType)) {
             disableResponseBodyRetention(captureState)
           }
         }
@@ -338,8 +354,14 @@ export class FirefoxNetworkCapture {
     const key = `${tabId}:${requestId}`
     if (this.responseFilters.has(key)) return
 
-    const browser = getFirefoxBrowser()
-    const streamFilter = browser.webRequest.filterResponseData(requestId)
+    let streamFilter: FirefoxStreamFilter
+    try {
+      streamFilter = getFirefoxBrowser().webRequest.filterResponseData(requestId)
+    } catch {
+      // Capturing request and response metadata remains useful if Firefox cannot
+      // create a response filter (for example, if a policy disables it).
+      return
+    }
     this.responseFilters.set(key, streamFilter)
     this.responseStates.set(key, createResponseCaptureState())
 

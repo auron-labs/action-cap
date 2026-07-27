@@ -10,7 +10,7 @@ Selects the browser target for the extension build.
 
 | Value | Behavior |
 |---|---|
-| `firefox` | Builds for Firefox: uses `webRequest` + `webRequestBlocking` for network capture, adds `browser_specific_settings.gecko` to manifest, uses background scripts instead of a service worker |
+| `firefox` | Builds for Firefox: uses `webRequest`, `webRequestBlocking`, and `webRequestFilterResponse` for network capture, adds `browser_specific_settings.gecko` to manifest, uses background scripts instead of a service worker |
 | Any other value or unset | Builds for Chrome/Edge: uses `debugger` permission and `chrome.debugger` CDP for network capture, uses a service worker background |
 
 Read in:
@@ -84,7 +84,7 @@ Defines the Manifest V3 extension manifest. Key settings:
 | `version` | `0.1.0` |
 | `default_locale` | `en` |
 | Permissions (Chrome/Edge) | `storage`, `tabs`, `scripting`, `webNavigation`, `debugger` |
-| Permissions (Firefox) | `storage`, `tabs`, `scripting`, `webNavigation`, `webRequest`, `webRequestBlocking` |
+| Permissions (Firefox) | `storage`, `tabs`, `scripting`, `webNavigation`, `webRequest`, `webRequestBlocking`, `webRequestFilterResponse` |
 | Host permissions | `<all_urls>` |
 | Content script | `src/content/recorder.ts` at `document_start` for all URLs |
 | Background (Chrome/Edge) | Service worker: `src/background/service-worker.ts` |

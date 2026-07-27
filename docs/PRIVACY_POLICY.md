@@ -26,7 +26,7 @@ When you click "Start Recording", ActionCap will capture the following types of 
 
 ### Network Traffic Data
 
-- Full request URLs, methods, and headers (including authentication headers and cookies)
+- Full request URLs and methods. Header values whose names indicate sensitive data (including authorization and cookies) are masked before storage.
 - Request bodies (**including login credentials, payment information, API keys submitted through forms or API calls**)
 - Response headers and response bodies
 - WebSocket and other network protocol data
@@ -75,7 +75,8 @@ ActionCap requires the following browser permissions:
 | `storage` | Store recording state and session data locally |
 | `tabs` | Identify tabs within the recording scope and open the results page |
 | `scripting` | Inject the recorder script into pages being recorded |
-| `debugger` | Capture network requests and responses via the Chrome DevTools Protocol |
+| `debugger` (Chrome/Edge) | Capture network requests and responses via the Chrome DevTools Protocol |
+| `webRequest`, `webRequestBlocking`, `webRequestFilterResponse` (Firefox) | Capture network requests and stream response bodies via Firefox's webRequest API |
 | `webNavigation` | Detect page navigation events during recording |
 | `<all_urls>` | Allow recording on any site the user chooses to inspect |
 

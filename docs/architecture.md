@@ -131,7 +131,7 @@ Source: `src/background/service-worker.ts:220-221, 604-771`
 
 ### Firefox (webRequest)
 
-Firefox uses `browser.webRequest` with `filterResponseData` instead of `chrome.debugger`. No debugging banner appears during recording. The implementation is in `src/common/firefox-network-capture.ts`.
+Firefox uses `browser.webRequest` with `filterResponseData` instead of `chrome.debugger`. The Firefox MV3 build requests `webRequestFilterResponse`, which is required to stream response bodies. No debugging banner appears during recording. The implementation is in `src/common/firefox-network-capture.ts`.
 
 ## Results page
 

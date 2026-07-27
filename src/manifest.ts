@@ -15,7 +15,7 @@ const basePermissions = ['storage', 'tabs', 'scripting', 'webNavigation']
 
 const permissions =
   TARGET_BROWSER === 'firefox'
-    ? [...basePermissions, 'webRequest', 'webRequestBlocking']
+    ? [...basePermissions, 'webRequest', 'webRequestBlocking', 'webRequestFilterResponse']
     : [...basePermissions, 'debugger']
 
 const background =

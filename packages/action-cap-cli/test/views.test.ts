@@ -33,6 +33,36 @@ describe('archive reader', () => {
   test('throws on missing bundle', () => {
     expect(() => parseArchive({ format: 'actioncap-session-archive', version: 1 })).toThrow()
   })
+
+  test('masks sensitive network header values without mutating the parsed archive', () => {
+    const archive = structuredClone(fixtureRaw)
+    archive.bundle.networkEvents[0].requestHeaders = {
+      Authorization: 'Bearer raw-request-secret',
+      'x token': 'raw-token',
+      Accept: 'application/json',
+    }
+    archive.bundle.networkEvents[0].responseHeaders = {
+      'Set-Cookie': 'session=raw-response-secret',
+      'X_Authorization': 'raw-response-authorization',
+      'Content-Type': 'application/json',
+    }
+
+    const parsed = parseArchive(archive)
+    const event = parsed.networkEvents[0]
+
+    expect(event.requestHeaders).toEqual({
+      Authorization: '***',
+      'x token': '***',
+      Accept: 'application/json',
+    })
+    expect(event.responseHeaders).toEqual({
+      'Set-Cookie': '***',
+      'X_Authorization': '***',
+      'Content-Type': 'application/json',
+    })
+    expect(archive.bundle.networkEvents[0].requestHeaders.Authorization).toBe('Bearer raw-request-secret')
+    expect(archive.bundle.networkEvents[0].responseHeaders['Set-Cookie']).toBe('session=raw-response-secret')
+  })
 })
 
 describe('sessionSummary', () => {
@@ -101,6 +131,9 @@ describe('networkRequests', () => {
     const view = networkRequests(bundle)
     expect(view).toHaveLength(5)
     expect(view[0].ts).toBeLessThanOrEqual(view[1].ts)
+    expect(view[0].requestId).toBe(bundle.networkEvents[0].requestId)
+    expect(view[0].phase).toBe(bundle.networkEvents[0].phase)
+    expect(view[0].bodyEncoding).toBe(bundle.networkEvents[0].bodyEncoding)
   })
 
   test('truncates response body by default', async () => {
@@ -137,6 +170,7 @@ describe('networkErrors', () => {
     const view = networkErrors(bundle)
     expect(view).toHaveLength(2)
     expect(view.every((e) => (e.status && e.status >= 400) || e.errorText)).toBe(true)
+    expect(view.every((e) => e.requestId.length > 0 && ['request', 'response'].includes(e.phase))).toBe(true)
   })
 
   test('includes full response bodies', async () => {

@@ -1,4 +1,4 @@
-# Permission Justification For Edge Add-ons Review
+# Permission Justification
 
 ## Summary
 
@@ -11,7 +11,8 @@ ActionCap is a browser debugging and session replay extension. It records user-i
 | `storage` | Stores recording state and recorded sessions locally in the browser. | Used only for local persistence. |
 | `tabs` | Detects the current tab, tracks tab scope, and opens the local results page after recording stops. | Only used for the tabs included in the selected recording scope. |
 | `scripting` | Injects the recorder content script into pages that the user chooses to record. | Injection is used only to capture on-page actions and replay events. |
-| `debugger` | Captures request and response details through the browser debugging protocol so the extension can show network metadata and payloads. | Attached only to tabs in the active recording session. |
+| `debugger` (Chrome/Edge) | Captures request and response details through the browser debugging protocol so the extension can show network metadata and payloads. | Attached only to tabs in the active recording session. |
+| `webRequest`, `webRequestBlocking`, `webRequestFilterResponse` (Firefox) | Captures request and response metadata and streams response bodies through Firefox's `webRequest` API. `webRequestFilterResponse` is required by Firefox MV3 to use `filterResponseData`. | Listeners ignore events outside an active recording; data is retained only for tracked tabs. |
 | `webNavigation` | Detects page navigation during recording. | Used only to keep the session timeline accurate. |
 | `<all_urls>` | Allows the extension to work on arbitrary sites because the user can choose any site to inspect. | Internal browser pages and some restricted pages still cannot be recorded. |
 
