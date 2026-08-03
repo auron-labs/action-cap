@@ -1,6 +1,6 @@
 import { record } from 'rrweb'
 import { buildStableSelector, summarizeElementText } from '../common/selectors'
-import { isSensitiveInputTarget, maskPrintableKeyIfSensitive, maskValueIfSensitive } from '../common/sanitizer'
+import { isSensitiveInputTarget, maskPrintableKeyIfSensitive, maskValueIfSensitive, sanitizeUrl } from '../common/sanitizer'
 import type { ReplayEventRecord, RuntimeResponse, UserActionEvent } from '../common/types'
 
 let stopRecordingFn: (() => void) | null = null
@@ -101,7 +101,7 @@ function startHrefWatcher() {
     sendUserAction(
       makeActionEvent('navigation', {
         metadata: {
-          href: location.href,
+          href: sanitizeUrl(location.href) ?? location.href,
         },
       }),
     )
@@ -249,18 +249,18 @@ function startRecorder(nextSessionId: string) {
       color: false,
       date: false,
       'datetime-local': false,
-      email: false,
+      email: true,
       month: false,
       number: false,
       range: false,
-      search: false,
+      search: true,
       select: false,
       tel: true,
-      text: false,
+      text: true,
       time: false,
-      url: false,
+      url: true,
       week: false,
-      textarea: false,
+      textarea: true,
     },
   })
 

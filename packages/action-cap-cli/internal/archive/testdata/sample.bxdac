@@ -1,0 +1,265 @@
+{
+  "format": "actioncap-session-archive",
+  "version": 1,
+  "exportedAt": 1719500000000,
+  "bundle": {
+    "session": {
+      "id": "sess-001",
+      "name": "Test Session",
+      "scope": "current-tab",
+      "status": "stopped",
+      "startTime": 1719500000000,
+      "endTime": 1719500060000,
+      "startTabId": 100,
+      "startWindowId": 1,
+      "tabCount": 2,
+      "actionCount": 8,
+      "networkCount": 5,
+      "replayCount": 3
+    },
+    "tabs": [
+      {
+        "id": "tab-001",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "windowId": 1,
+        "title": "Login Page",
+        "url": "https://example.com/login",
+        "faviconUrl": "https://example.com/favicon.ico",
+        "attachedDebugger": true,
+        "firstSeenAt": 1719500000000,
+        "lastSeenAt": 1719500060000
+      },
+      {
+        "id": "tab-002",
+        "sessionId": "sess-001",
+        "tabId": 200,
+        "windowId": 1,
+        "title": "Dashboard",
+        "url": "https://example.com/dashboard",
+        "attachedDebugger": true,
+        "firstSeenAt": 1719500020000,
+        "lastSeenAt": 1719500060000
+      }
+    ],
+    "userActions": [
+      {
+        "id": "act-001",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500001000,
+        "type": "navigation",
+        "url": "https://example.com/login",
+        "title": "Login Page"
+      },
+      {
+        "id": "act-002",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500002000,
+        "type": "click",
+        "url": "https://example.com/login",
+        "selector": "#username",
+        "element": {
+          "tagName": "input",
+          "text": "",
+          "id": "username",
+          "className": "form-input",
+          "role": "textbox",
+          "name": "username"
+        },
+        "coordinates": { "x": 100, "y": 200 }
+      },
+      {
+        "id": "act-003",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500003000,
+        "type": "input",
+        "url": "https://example.com/login",
+        "selector": "#username",
+        "element": {
+          "tagName": "input",
+          "id": "username",
+          "name": "username"
+        },
+        "value": "alice"
+      },
+      {
+        "id": "act-004",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500003500,
+        "type": "input",
+        "url": "https://example.com/login",
+        "selector": "#password",
+        "element": {
+          "tagName": "input",
+          "id": "password",
+          "name": "password"
+        },
+        "value": "al***ab",
+        "masked": true
+      },
+      {
+        "id": "act-005",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500004000,
+        "type": "submit",
+        "url": "https://example.com/login",
+        "selector": "#login-form",
+        "element": {
+          "tagName": "form",
+          "id": "login-form"
+        }
+      },
+      {
+        "id": "act-006",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500005000,
+        "type": "navigation",
+        "url": "https://example.com/dashboard",
+        "title": "Dashboard"
+      },
+      {
+        "id": "act-007",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500005500,
+        "type": "scroll",
+        "url": "https://example.com/dashboard",
+        "scroll": { "x": 0, "y": 500 }
+      },
+      {
+        "id": "act-008",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "frameId": 0,
+        "ts": 1719500006000,
+        "type": "tab-created",
+        "url": "https://example.com/dashboard",
+        "title": "Dashboard"
+      }
+    ],
+    "networkEvents": [
+      {
+        "id": "net-001",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "requestId": "req-001",
+        "ts": 1719500001000,
+        "phase": "response",
+        "url": "https://api.example.com/login",
+        "method": "GET",
+        "status": 200,
+        "statusText": "OK",
+        "resourceType": "xhr",
+        "mimeType": "application/json",
+        "durationMs": 150,
+        "responseBody": "{\"ok\":true}",
+        "requestHeaders": { "Accept": "application/json" },
+        "responseHeaders": { "Content-Type": "application/json" }
+      },
+      {
+        "id": "net-002",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "requestId": "req-002",
+        "ts": 1719500004000,
+        "phase": "response",
+        "url": "https://api.example.com/auth",
+        "method": "POST",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "resourceType": "xhr",
+        "mimeType": "application/json",
+        "durationMs": 300,
+        "requestBody": "{\"username\":\"alice\"}",
+        "responseBody": "{\"error\":\"Invalid credentials\"}",
+        "errorText": "HTTP 401 Unauthorized"
+      },
+      {
+        "id": "net-003",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "requestId": "req-003",
+        "ts": 1719500005000,
+        "phase": "response",
+        "url": "https://api.example.com/auth",
+        "method": "POST",
+        "status": 200,
+        "statusText": "OK",
+        "resourceType": "xhr",
+        "mimeType": "application/json",
+        "durationMs": 250,
+        "requestBody": "{\"username\":\"alice\",\"password\":\"***\"}",
+        "responseBody": "{\"token\":\"abc123\"}",
+        "truncated": false
+      },
+      {
+        "id": "net-004",
+        "sessionId": "sess-001",
+        "tabId": 200,
+        "requestId": "req-004",
+        "ts": 1719500006000,
+        "phase": "response",
+        "url": "https://api.example.com/users",
+        "method": "GET",
+        "status": 500,
+        "statusText": "Internal Server Error",
+        "resourceType": "xhr",
+        "mimeType": "application/json",
+        "durationMs": 500,
+        "responseBody": "{\"error\":\"Database connection failed\"}",
+        "errorText": "HTTP 500"
+      },
+      {
+        "id": "net-005",
+        "sessionId": "sess-001",
+        "tabId": 200,
+        "requestId": "req-005",
+        "ts": 1719500007000,
+        "phase": "response",
+        "url": "https://api.example.com/users?page=1",
+        "method": "GET",
+        "status": 200,
+        "statusText": "OK",
+        "resourceType": "xhr",
+        "mimeType": "application/json",
+        "durationMs": 100
+      }
+    ],
+    "replayEvents": [
+      {
+        "id": "rep-001",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "ts": 1719500000500,
+        "payload": { "type": 4, "data": { "href": "https://example.com/login" } }
+      },
+      {
+        "id": "rep-002",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "ts": 1719500002500,
+        "payload": { "type": 2, "data": { "node": { "type": 0, "tagName": "html" } } }
+      },
+      {
+        "id": "rep-003",
+        "sessionId": "sess-001",
+        "tabId": 100,
+        "ts": 1719500004500,
+        "payload": { "type": 3, "data": { "source": 0, "text": "alice" } }
+      }
+    ]
+  }
+}

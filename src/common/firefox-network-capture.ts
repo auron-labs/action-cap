@@ -1,4 +1,4 @@
-import { isProbablyTextMimeType, mergeHeaders, sanitizeHeaders, truncateBody } from './sanitizer'
+import { isProbablyTextMimeType, mergeHeaders, sanitizeBody, sanitizeHeaders, sanitizeUrl } from './sanitizer'
 import type { NetworkEvent } from './types'
 
 type RequestContext = {
@@ -172,8 +172,6 @@ function decodeRequestBody(details: FirefoxWebRequestDetails): string | undefine
   return undefined
 }
 
-const MAX_RESPONSE_BODY_LENGTH = 1_000_000
-
 export function createResponseCaptureState(): ResponseCaptureState {
   return {
     chunks: [],
@@ -186,22 +184,8 @@ export function createResponseCaptureState(): ResponseCaptureState {
 export function captureResponseChunk(
   state: ResponseCaptureState,
   chunk: Uint8Array,
-  maxBytes = MAX_RESPONSE_BODY_LENGTH,
 ) {
   if (!state.retainBody || chunk.length === 0) {
-    return
-  }
-
-  const remainingBytes = maxBytes - state.capturedBytes
-  if (remainingBytes <= 0) {
-    state.truncated = true
-    return
-  }
-
-  if (chunk.length > remainingBytes) {
-    state.chunks.push(chunk.slice(0, remainingBytes))
-    state.capturedBytes += remainingBytes
-    state.truncated = true
     return
   }
 
@@ -258,14 +242,13 @@ export class FirefoxNetworkCapture {
         const key = `${details.tabId}:${details.requestId}`
         const context = this.getOrCreateContext(key, details.tabId)
         context.startedAt = Date.now()
-        context.url = details.url
+        context.url = sanitizeUrl(details.url) ?? details.url
         context.method = details.method
         context.resourceType = details.type
         context.initiator = details.initiator ?? details.originUrl
 
         const requestBody = decodeRequestBody(details)
-        const truncated = truncateBody(requestBody)
-        context.requestBody = truncated.body
+        context.requestBody = sanitizeBody(requestBody)
 
         this.setupResponseFilter(details.requestId, details.tabId)
       },
@@ -293,13 +276,13 @@ export class FirefoxNetworkCapture {
           requestId: details.requestId,
           ts: Date.now(),
           phase: 'request',
-          url: details.url,
+          url: context.url,
           method: details.method,
           resourceType: details.type,
           requestHeaders: context.requestHeaders,
           requestBody: context.requestBody,
           initiator: context.initiator,
-          truncated: context.requestBody !== undefined && context.requestBody.length > 1_000_000,
+          truncated: false,
         })
       },
       filter,
@@ -420,7 +403,7 @@ export class FirefoxNetworkCapture {
       try {
         if (captureState && captureState.chunks.length > 0) {
           const combined = combineUint8Arrays(captureState.chunks)
-          responseBody = new TextDecoder().decode(combined)
+          responseBody = sanitizeBody(new TextDecoder().decode(combined), context.mimeType)
           truncated = captureState.truncated
         }
       } catch {

@@ -1,6 +1,6 @@
 import { t } from '../common/i18n'
 import { db } from '../common/storage'
-import { isProbablyTextMimeType, mergeHeaders, sanitizeHeaders, truncateBody } from '../common/sanitizer'
+import { isProbablyTextMimeType, mergeHeaders, sanitizeBody, sanitizeHeaders, sanitizeUrl } from '../common/sanitizer'
 import { ACTIVE_RECORDING_KEY, snapshotFromActiveRecording } from '../common/recording-state'
 import { buildSessionName } from '../common/session-utils'
 import { IS_FIREFOX } from '../common/browser-target'
@@ -222,7 +222,14 @@ async function recordNetworkEvent(event: NetworkEvent) {
     return
   }
 
-  await db.networkEvents.put(event)
+  await db.networkEvents.put({
+    ...event,
+    url: sanitizeUrl(event.url) ?? event.url,
+    requestHeaders: sanitizeHeaders(event.requestHeaders),
+    responseHeaders: sanitizeHeaders(event.responseHeaders),
+    requestBody: sanitizeBody(event.requestBody, event.requestHeaders?.['content-type'] ?? event.requestHeaders?.['Content-Type']),
+    responseBody: sanitizeBody(event.responseBody, event.mimeType ?? event.responseHeaders?.['content-type'] ?? event.responseHeaders?.['Content-Type']),
+  })
   activeRecording.stats.networkCount += 1
   await updateSessionCounts()
 }
@@ -746,14 +753,13 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
       }
 
       const requestHeaders = sanitizeHeaders(request.headers)
-      const requestBodyResult = truncateBody(request.postData)
       const context = getOrCreateRequestContext(key, tabId)
       context.startedAt = Date.now()
       context.tabId = tabId
-      context.url = request.url
+      context.url = sanitizeUrl(request.url) ?? request.url
       context.method = request.method
       context.requestHeaders = mergeHeaders(context.requestHeaders, requestHeaders)
-      context.requestBody = requestBodyResult.body
+      context.requestBody = sanitizeBody(request.postData, requestHeaders?.['content-type'] ?? requestHeaders?.['Content-Type'])
       context.resourceType = typeof payload.type === 'string' ? payload.type : context.resourceType
       context.initiator = typeof payload.initiator?.type === 'string' ? payload.initiator.type : context.initiator
 
@@ -764,13 +770,13 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
         requestId,
         ts: Date.now(),
         phase: 'request',
-        url: request.url,
+        url: context.url,
         method: request.method,
         resourceType: typeof payload.type === 'string' ? payload.type : undefined,
         requestHeaders: context.requestHeaders,
-        requestBody: requestBodyResult.body,
+        requestBody: context.requestBody,
         initiator: typeof payload.initiator?.type === 'string' ? payload.initiator.type : undefined,
-        truncated: requestBodyResult.truncated,
+        truncated: false,
       })
       return
     }
@@ -827,9 +833,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
             body?: string
             base64Encoded?: boolean
           }
-          const truncatedBody = truncateBody(response.body)
-          responseBody = truncatedBody.body
-          truncated = truncatedBody.truncated
+          responseBody = sanitizeBody(response.body, existing.mimeType)
+          truncated = false
           bodyEncoding = response.base64Encoded ? 'base64' : 'plain'
         } catch (error) {
           responseBody = `[failed to capture response body: ${String(error)}]`

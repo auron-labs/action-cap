@@ -6,7 +6,10 @@ import {
   maskPrintableKeyIfSensitive,
   maskValue,
   maskValueIfSensitive,
+  sanitizeBody,
   sanitizeHeaders,
+  sanitizeJsonValue,
+  sanitizeUrl,
   shouldMaskKey,
 } from './sanitizer.ts'
 
@@ -50,7 +53,48 @@ test('shouldMaskKey detects common sensitive field names', () => {
   assert.equal(shouldMaskKey('session_cookie'), true)
   assert.equal(shouldMaskKey('pass word'), true)
   assert.equal(shouldMaskKey('ID Card Number'), true)
+  assert.equal(shouldMaskKey('api_key'), true)
+  assert.equal(shouldMaskKey('csrfNonce'), true)
+  assert.equal(shouldMaskKey('one_time_otp'), true)
+  assert.equal(shouldMaskKey('credit-card-cvv'), true)
   assert.equal(shouldMaskKey('email'), false)
+})
+
+test('sanitizeBody redacts structured credentials without truncating large bodies', () => {
+  const largeValue = 'x'.repeat(1_100_000)
+  const json = sanitizeBody(JSON.stringify({ password: 'hunter2', data: largeValue }), 'application/json')
+  const parsed = JSON.parse(json ?? '{}')
+
+  assert.equal(parsed.password, '***')
+  assert.equal(parsed.data, largeValue)
+  assert.equal(json?.includes('hunter2'), false)
+
+  assert.equal(
+    sanitizeBody('username=alice&access_token=secret-value&note=hello', 'application/x-www-form-urlencoded'),
+    'username=alice&access_token=***&note=hello',
+  )
+})
+
+test('sanitizeBody conservatively redacts bearer tokens and JWTs in text', () => {
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature'
+  const result = sanitizeBody(`Authorization: Bearer live-token-123 jwt=${jwt}`, 'text/plain')
+
+  assert.equal(result?.includes('live-token-123'), false)
+  assert.equal(result?.includes(jwt), false)
+  assert.match(result ?? '', /\*\*\*/)
+})
+
+test('sanitizeUrl redacts sensitive query parameters and preserves other values', () => {
+  assert.equal(
+    sanitizeUrl('https://example.com/callback?access_token=top-secret&state=visible#done'),
+    'https://example.com/callback?access_token=***&state=visible#done',
+  )
+})
+
+test('sanitizeJsonValue recursively masks sensitive object fields', () => {
+  assert.deepEqual(sanitizeJsonValue({ profile: { apiKey: 'abc', email: 'visible@example.com' } }), {
+    profile: { apiKey: '***', email: 'visible@example.com' },
+  })
 })
 
 test('maskValueIfSensitive only masks values for sensitive targets', () => {

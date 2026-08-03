@@ -112,18 +112,18 @@ function createChunk(text: string): ArrayBuffer {
   return new TextEncoder().encode(text).buffer
 }
 
-test('captureResponseChunk truncates at the byte limit and binary cleanup drops retained bytes', () => {
+test('captureResponseChunk retains the complete body and binary cleanup drops retained bytes', () => {
   const state = createResponseCaptureState()
 
-  captureResponseChunk(state, new TextEncoder().encode('abc'), 5)
-  captureResponseChunk(state, new TextEncoder().encode('defg'), 5)
+  captureResponseChunk(state, new TextEncoder().encode('abc'))
+  captureResponseChunk(state, new TextEncoder().encode('defg'))
 
-  assert.equal(state.capturedBytes, 5)
-  assert.equal(state.truncated, true)
-  assert.equal(decodeChunks(state.chunks), 'abcde')
+  assert.equal(state.capturedBytes, 7)
+  assert.equal(state.truncated, false)
+  assert.equal(decodeChunks(state.chunks), 'abcdefg')
 
   disableResponseBodyRetention(state)
-  captureResponseChunk(state, new TextEncoder().encode('ignored'), 5)
+  captureResponseChunk(state, new TextEncoder().encode('ignored'))
 
   assert.equal(state.retainBody, false)
   assert.equal(state.capturedBytes, 0)
@@ -200,7 +200,7 @@ test('FirefoxNetworkCapture writes chunks through immediately and waits for onst
   }
 })
 
-test('FirefoxNetworkCapture streams large text responses through and caps the stored body', async () => {
+test('FirefoxNetworkCapture streams and stores complete large text responses', async () => {
   const originalBrowser = (globalThis as { browser?: unknown }).browser
   const fakeBrowser = createFakeBrowser()
   ;(globalThis as { browser?: unknown }).browser = fakeBrowser.browser
@@ -258,9 +258,9 @@ test('FirefoxNetworkCapture streams large text responses through and caps the st
     assert.equal(streamFilter.closeCalls, 1)
     assert.equal(events.length, 1)
     assert.equal(events[0]?.phase, 'response')
-    assert.equal((events[0]?.responseBody as string | undefined)?.length, 1_000_000)
-    assert.equal((events[0]?.responseBody as string | undefined), fullResponse.slice(0, 1_000_000))
-    assert.equal(events[0]?.truncated, true)
+    assert.equal((events[0]?.responseBody as string | undefined)?.length, fullResponse.length)
+    assert.equal((events[0]?.responseBody as string | undefined), fullResponse)
+    assert.equal(events[0]?.truncated, false)
   } finally {
     if (originalBrowser === undefined) {
       delete (globalThis as { browser?: unknown }).browser

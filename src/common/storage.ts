@@ -1,4 +1,5 @@
 import Dexie from 'dexie'
+import { sanitizeBody, sanitizeHeaders, sanitizeJsonValue, sanitizeUrl } from './sanitizer'
 import { t } from './i18n'
 import type {
   NetworkEvent,
@@ -181,17 +182,41 @@ function buildImportedTabs(bundle: SessionBundle, sessionId: string) {
   return [...uniqueTabs.values()]
 }
 
+function sanitizeNetworkEvent(event: NetworkEvent): NetworkEvent {
+  return {
+    ...event,
+    url: sanitizeUrl(event.url) ?? event.url,
+    requestHeaders: sanitizeHeaders(event.requestHeaders),
+    responseHeaders: sanitizeHeaders(event.responseHeaders),
+    requestBody: sanitizeBody(event.requestBody, event.requestHeaders?.['content-type'] ?? event.requestHeaders?.['Content-Type']),
+    responseBody: sanitizeBody(event.responseBody, event.mimeType ?? event.responseHeaders?.['content-type'] ?? event.responseHeaders?.['Content-Type']),
+  }
+}
+
+function sanitizeSessionBundle(bundle: SessionBundle): SessionBundle {
+  return sanitizeJsonValue({
+    ...bundle,
+    tabs: bundle.tabs.map((tab) => ({ ...tab, url: sanitizeUrl(tab.url) })),
+    userActions: bundle.userActions.map((event) => ({
+      ...event,
+      url: sanitizeUrl(event.url) ?? event.url,
+      metadata: event.metadata ? sanitizeJsonValue(event.metadata) as UserActionEvent['metadata'] : undefined,
+    })),
+    networkEvents: bundle.networkEvents.map(sanitizeNetworkEvent),
+  }) as SessionBundle
+}
+
 export function buildSessionArchive(bundle: SessionBundle): SessionArchive {
   return {
     format: SESSION_ARCHIVE_FORMAT,
     version: SESSION_ARCHIVE_VERSION,
     exportedAt: Date.now(),
-    bundle,
+    bundle: sanitizeSessionBundle(bundle),
   }
 }
 
 export async function importSessionArchive(payload: unknown) {
-  const bundle = asSessionBundle(payload)
+  const bundle = sanitizeSessionBundle(asSessionBundle(payload))
   const session = getImportedSession(bundle)
   validateImportedBundle(bundle, session)
   const importedSessionId = crypto.randomUUID()
