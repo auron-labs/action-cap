@@ -61,7 +61,7 @@ src/
 
 1. User clicks the ActionCap toolbar icon → popup opens.
 2. User selects a scope (Current Tab / Across Tabs / All Windows) and clicks **Start Recording**.
-3. Popup sends `chrome.runtime.sendMessage({ type: 'START_RECORDING', scope })` to the service worker.
+3. Popup sends `chrome.runtime.sendMessage({ type: 'START_RECORDING', scope, captureScreenshots })` to the service worker.
 4. The service worker (`src/background/service-worker.ts`):
    - Creates a session record in IndexedDB.
    - On Chrome/Edge: attaches `chrome.debugger` to each tab in scope (CDP protocol version 1.3, `Network.enable`).
@@ -80,6 +80,7 @@ src/
 - **Service worker**:
   - Receives user action and rrweb events from content scripts → stores in Dexie tables (`userActions`, `replayEvents`).
   - Captures network events via CDP `Network.*` events (Chrome/Edge) or `webRequest` (Firefox) → stores in `networkEvents`.
+  - When enabled, captures the focused window's active tab viewport as a JPEG after completed navigations and stores it on the matching navigation action metadata.
   - Records tab lifecycle events: `tab-activated`, `tab-created`, `tab-removed`, `window-focus`, `navigation`.
   - Applies sanitization: masks sensitive headers/values, truncates large response bodies, omits binary content.
 
@@ -105,7 +106,7 @@ The extension communicates via `chrome.runtime.sendMessage` with these message t
 | Message type | Direction | Purpose |
 |---|---|---|
 | `GET_RECORDING_STATE` | Popup → Service worker | Query active recording status |
-| `START_RECORDING` | Popup → Service worker | Start recording with `{ scope: RecordingScope }` |
+| `START_RECORDING` | Popup → Service worker | Start recording with `{ scope: RecordingScope, captureScreenshots?: boolean }` |
 | `STOP_RECORDING` | Popup → Service worker | Stop active recording |
 | `CONTENT_BOOTSTRAP_REQUEST` | Content script → Service worker | Ask if recording is active for this tab |
 | `RECORDED_USER_ACTION` | Content script → Service worker | Send a `UserActionEvent` |

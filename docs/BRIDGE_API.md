@@ -34,13 +34,14 @@ chrome.runtime.sendMessage(actionCapId, { type: 'GET_RECORDING_STATE' }, (respon
 
 ### `START_RECORDING`
 
-Start a recording with a given scope. Returns an error if a recording is already active, unless `restart: true` is set.
+Start a recording with a given scope. `captureScreenshots` is optional and defaults to `false`; when enabled, ActionCap captures a JPEG of the active tab's visible viewport after completed navigations. Returns an error if a recording is already active, unless `restart: true` is set.
 
 ```js
 // Start recording the current tab
 chrome.runtime.sendMessage(actionCapId, {
   type: 'START_RECORDING',
   scope: 'current-tab',  // 'current-tab' | 'cross-tab' | 'all-windows'
+  captureScreenshots: true, // optional; defaults to false
 }, (response) => {
   if (response.ok) {
     console.log('Recording started', response.state)

@@ -13,6 +13,7 @@ const emptyState = createEmptyRecordingStateSnapshot()
 
 export function PopupApp() {
   const [scope, setScope] = useState<RecordingScope>('current-tab')
+  const [captureScreenshots, setCaptureScreenshots] = useState(false)
   const [state, setState] = useState<RecordingStateSnapshot>(emptyState)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +64,7 @@ export function PopupApp() {
 
   useEffect(() => {
     if (!state.active) {
+      setCaptureScreenshots(false)
       return
     }
 
@@ -88,6 +90,7 @@ export function PopupApp() {
       const response = (await chrome.runtime.sendMessage({
         type: 'START_RECORDING',
         scope,
+        captureScreenshots,
       })) as RuntimeResponse
 
       if (!response.ok) {
@@ -118,6 +121,7 @@ export function PopupApp() {
       }
 
       setState(response.state ?? emptyState)
+      setCaptureScreenshots(false)
       setNow(Date.now())
     } finally {
       setBusy(false)
@@ -177,6 +181,21 @@ export function PopupApp() {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="option-panel">
+        <label className="option-card">
+          <input
+            type="checkbox"
+            checked={state.active ? state.captureScreenshots : captureScreenshots}
+            onChange={(event) => setCaptureScreenshots(event.target.checked)}
+            disabled={state.active || busy}
+          />
+          <span>
+            <strong>{t('capture_screenshots')}</strong>
+            <small>{t('capture_screenshots_desc')}</small>
+          </span>
+        </label>
       </section>
 
       <section className="action-panel">

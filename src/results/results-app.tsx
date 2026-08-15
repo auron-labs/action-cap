@@ -594,6 +594,12 @@ function ConfirmModal({
 }
 
 function ActionDetail({ event }: { event: UserActionEvent }) {
+  const screenshotValue = event.metadata?.screenshot
+  const screenshot = typeof screenshotValue === 'string' && screenshotValue.startsWith('data:image/jpeg;base64,')
+    ? screenshotValue
+    : undefined
+  const metadataEntries = Object.entries(event.metadata ?? {}).filter(([key]) => key !== 'screenshot')
+
   return (
     <div className="detail-panel">
       <div className="detail-head"><span className="kind-pill action">{t('timeline_tag_action')}</span><strong>{formatDate(event.ts)}</strong></div>
@@ -614,7 +620,13 @@ function ActionDetail({ event }: { event: UserActionEvent }) {
           { label: t('label_masked'), value: event.masked ? t('yes') : t('no') },
         ]} />
       </section>
-      {event.metadata ? <section className="detail-section"><h3>{t('action_metadata')}</h3><CodeBlock content={JSON.stringify(event.metadata, null, 2)} language="json" /></section> : null}
+      {screenshot ? (
+        <section className="detail-section">
+          <h3>{t('navigation_screenshot')}</h3>
+          <div className="navigation-screenshot"><img src={screenshot} alt={t('navigation_screenshot')} /></div>
+        </section>
+      ) : null}
+      {metadataEntries.length ? <section className="detail-section"><h3>{t('action_metadata')}</h3><CodeBlock content={JSON.stringify(Object.fromEntries(metadataEntries), null, 2)} language="json" /></section> : null}
     </div>
   )
 }

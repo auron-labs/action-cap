@@ -1,6 +1,6 @@
 # ActionCap Privacy Policy
 
-Last updated: 2026-04-03
+Last updated: 2026-08-15
 
 ## Overview
 
@@ -35,6 +35,7 @@ When you click "Start Recording", ActionCap will capture the following types of 
 
 - Full DOM snapshots and incremental DOM changes (captured via rrweb)
 - Page URLs, titles, and visible text content
+- If the optional screenshot setting is enabled, a JPEG of the active tab's visible viewport after each completed navigation; screenshots may contain sensitive information
 - **Any sensitive information displayed on the page, such as account balances, transaction records, personal profiles, and private messages**
 
 ### Session Metadata
@@ -61,6 +62,8 @@ ActionCap provides the ability to export session data as files. Please be aware:
 
 > **Exported session files may contain all sensitive information recorded during the session, including plaintext passwords, financial data, and authentication credentials.**
 >
+> **When enabled, exported session files also include recorded navigation screenshots.**
+>
 > - **DO NOT** send exported files to untrusted individuals or organizations.
 > - **DO NOT** upload exported files to public file-sharing services, forums, or social media.
 > - **DO NOT** attach exported files to emails or messages without knowing exactly what they contain.
@@ -73,7 +76,7 @@ ActionCap requires the following browser permissions:
 | Permission | Purpose |
 |---|---|
 | `storage` | Store recording state and session data locally |
-| `tabs` | Identify tabs within the recording scope and open the results page |
+| `tabs` | Identify tabs within the recording scope, capture the active visible viewport when enabled, and open the results page |
 | `scripting` | Inject the recorder script into pages being recorded |
 | `debugger` (Chrome/Edge) | Capture network requests and responses via the Chrome DevTools Protocol |
 | `webRequest`, `webRequestBlocking`, `webRequestFilterResponse` (Firefox) | Capture network requests and stream response bodies via Firefox's webRequest API |
@@ -83,6 +86,7 @@ ActionCap requires the following browser permissions:
 ## User Controls
 
 - Choose the recording scope (current tab, cross-tab, or all windows) before starting.
+- Optionally enable navigation screenshots before starting; this setting is off by default.
 - Stop recording at any time via the popup or the browser debugging banner.
 - Delete any recorded session from the results page.
 - Export or import session data at your discretion.

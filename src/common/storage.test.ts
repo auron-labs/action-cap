@@ -187,6 +187,36 @@ test('importSessionArchive imports a valid wrapped archive and rewrites persiste
   }
 })
 
+test('preserves JPEG screenshots while sanitizing other action metadata during export and import', async () => {
+  const spies = installDbSpies()
+  const screenshot = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=='
+
+  try {
+    const bundle = buildValidBundle()
+    bundle.userActions[0] = {
+      ...bundle.userActions[0],
+      type: 'navigation',
+      metadata: {
+        screenshot,
+        token: 'secret-token',
+        note: 'Bearer secret-token',
+      },
+    }
+
+    const archive = buildSessionArchive(bundle)
+    assert.equal(archive.bundle.userActions[0]?.metadata?.screenshot, screenshot)
+    assert.equal(archive.bundle.userActions[0]?.metadata?.token, '***')
+    assert.equal(archive.bundle.userActions[0]?.metadata?.note, 'Bearer ***')
+
+    await importSessionArchive(archive)
+    assert.equal(spies.writes.userActions[0]?.metadata?.screenshot, screenshot)
+    assert.equal(spies.writes.userActions[0]?.metadata?.token, '***')
+    assert.equal(spies.writes.userActions[0]?.metadata?.note, 'Bearer ***')
+  } finally {
+    spies.restore()
+  }
+})
+
 test('importSessionArchive rejects wrapped archives without a session', async () => {
   const spies = installDbSpies()
 

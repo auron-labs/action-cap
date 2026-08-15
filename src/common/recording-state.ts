@@ -6,6 +6,7 @@ export function createEmptyRecordingStateSnapshot(): RecordingStateSnapshot {
   return {
     active: false,
     status: 'idle',
+    captureScreenshots: false,
     stats: { tabCount: 0, actionCount: 0, networkCount: 0, replayCount: 0 },
     trackedTabIds: [],
   }
@@ -21,6 +22,7 @@ export function snapshotFromActiveRecording(
   return {
     active: true,
     status: activeRecording.status,
+    captureScreenshots: activeRecording.captureScreenshots === true,
     sessionId: activeRecording.sessionId,
     scope: activeRecording.scope,
     startTime: activeRecording.startTime,

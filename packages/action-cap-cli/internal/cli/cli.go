@@ -27,27 +27,30 @@ Commands:
   elements     Unique elements interacted with, with action types and counts
   tabs         Tab lifecycle: creation, activation, removal
   replay       rrweb replay event metadata (count, time range, size)
+  screenshots  Extract JPEG screenshots referenced by user actions
   dump         Complete archive dump
   help         Show this help message
 
 Global flags:
   --format json|table|toon   Output format (default json)
   --verbose                  Verbose logging to stderr
+  --output-dir DIR           Output directory for screenshots
 
 Run 'actioncap <command> --help' for command-specific flags.
 `
 
 type commandFlags struct {
-	Tab          string
-	Type         string
-	Status       string
-	From         string
-	To           string
-	Limit        string
+	Tab           string
+	Type          string
+	Status        string
+	From          string
+	To            string
+	Limit         string
 	IncludeScroll bool
-	Headers      bool
-	Full         bool
-	NoReplay     bool
+	Headers       bool
+	Full          bool
+	NoReplay      bool
+	OutputDir     string
 }
 
 func registerFlags(fs *flag.FlagSet) *commandFlags {
@@ -62,6 +65,7 @@ func registerFlags(fs *flag.FlagSet) *commandFlags {
 	fs.BoolVar(&cf.Headers, "headers", false, "Include request/response headers (excluded by default)")
 	fs.BoolVar(&cf.Full, "full", false, "Output raw rrweb event payloads")
 	fs.BoolVar(&cf.NoReplay, "no-replay", false, "Exclude rrweb replay events")
+	fs.StringVar(&cf.OutputDir, "output-dir", "", "Directory for extracted screenshots")
 	return cf
 }
 
@@ -81,6 +85,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	verbose := fs.Bool("verbose", false, "Verbose logging to stderr")
 	cf := registerFlags(fs)
 	if err := fs.Parse(args[2:]); err != nil {
+		return 2
+	}
+	if cmd == "screenshots" && cf.OutputDir == "" {
+		fmt.Fprintln(stderr, "actioncap: screenshots requires --output-dir DIR")
 		return 2
 	}
 	if fs.NArg() == 0 {
@@ -144,6 +152,8 @@ func dispatch(name string, cf *commandFlags, ar *archive.SessionArchive, enc *ou
 		return enc.Write(map[string]any{"tabs": view.TabLifecycle(bundle)}, f)
 	case "replay":
 		return enc.Write(view.ReplayMetadata(bundle, cf.Full), f)
+	case "screenshots":
+		return extractAndWriteScreenshots(bundle, cf.OutputDir, enc, f)
 	case "dump":
 		return enc.Write(view.FullDump(bundle, cf.NoReplay), f)
 	default:
@@ -156,7 +166,7 @@ func dispatch(name string, cf *commandFlags, ar *archive.SessionArchive, enc *ou
 func suggestCommand(name string) string {
 	known := []string{
 		"summary", "actions", "network", "errors", "endpoints",
-		"forms", "navigation", "elements", "tabs", "replay", "dump",
+		"forms", "navigation", "elements", "tabs", "replay", "screenshots", "dump",
 	}
 	best := ""
 	bestDist := -1
@@ -289,7 +299,7 @@ func parseFormat(s string) (output.Format, error) {
 func SortedCommands() []string {
 	cmds := []string{
 		"summary", "actions", "network", "errors", "endpoints",
-		"forms", "navigation", "elements", "tabs", "replay", "dump",
+		"forms", "navigation", "elements", "tabs", "replay", "screenshots", "dump",
 	}
 	sort.Strings(cmds)
 	return cmds

@@ -49,6 +49,7 @@ type SessionArchive = {
 
 const SESSION_ARCHIVE_FORMAT = 'actioncap-session-archive'
 const SESSION_ARCHIVE_VERSION = 1
+const JPEG_SCREENSHOT_PREFIX = 'data:image/jpeg;base64,'
 
 // Import validation stays local to the extension instead of pulling in Zod from
 // the CLI package. The archive checks here are small, bundle-sensitive, and do
@@ -193,8 +194,17 @@ function sanitizeNetworkEvent(event: NetworkEvent): NetworkEvent {
   }
 }
 
+function isValidJpegScreenshot(value: unknown): value is string {
+  if (typeof value !== 'string' || !value.startsWith(JPEG_SCREENSHOT_PREFIX)) {
+    return false
+  }
+
+  const base64 = value.slice(JPEG_SCREENSHOT_PREFIX.length)
+  return base64.length > 0 && base64.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(base64)
+}
+
 function sanitizeSessionBundle(bundle: SessionBundle): SessionBundle {
-  return sanitizeJsonValue({
+  const sanitized = sanitizeJsonValue({
     ...bundle,
     tabs: bundle.tabs.map((tab) => ({ ...tab, url: sanitizeUrl(tab.url) })),
     userActions: bundle.userActions.map((event) => ({
@@ -204,6 +214,19 @@ function sanitizeSessionBundle(bundle: SessionBundle): SessionBundle {
     })),
     networkEvents: bundle.networkEvents.map(sanitizeNetworkEvent),
   }) as SessionBundle
+
+  for (const [index, event] of bundle.userActions.entries()) {
+    const screenshot = event.metadata?.screenshot
+    const sanitizedEvent = sanitized.userActions[index]
+    if (isValidJpegScreenshot(screenshot) && sanitizedEvent) {
+      sanitizedEvent.metadata = {
+        ...sanitizedEvent.metadata,
+        screenshot,
+      }
+    }
+  }
+
+  return sanitized
 }
 
 export function buildSessionArchive(bundle: SessionBundle): SessionArchive {

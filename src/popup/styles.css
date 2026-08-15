@@ -202,6 +202,53 @@ button {
   cursor: not-allowed;
 }
 
+.option-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(21, 27, 35, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+}
+
+.option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.option-card input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: #4cff93;
+}
+
+.option-card span {
+  display: grid;
+  gap: 5px;
+}
+
+.option-card strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.option-card small {
+  color: #8b949e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.option-card:has(input:disabled) {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .action-row {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);

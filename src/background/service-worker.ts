@@ -35,6 +35,8 @@ const ALLOWED_EXTERNAL_ACTION_TYPES: ReadonlySet<string> = new Set([
   'blur',
   'navigation',
 ])
+const NAVIGATION_SCREENSHOT_METADATA_KEY = 'screenshot'
+const NAVIGATION_SCREENSHOT_QUALITY = 65
 
 type RequestContext = {
   startedAt: number
@@ -53,6 +55,8 @@ type RequestContext = {
 
 let activeRecording: ActiveRecordingState | null = null
 const requestContexts = new Map<string, RequestContext>()
+const navigationActions = new Map<number, UserActionEvent>()
+const pendingScreenshotEvents = new Set<string>()
 
 let firefoxNetworkCapture: FirefoxNetworkCapture | null = null
 
@@ -64,7 +68,10 @@ async function init() {
     return
   }
 
-  activeRecording = restored
+  activeRecording = {
+    ...restored,
+    captureScreenshots: restored.captureScreenshots === true,
+  }
   activeRecording.status = 'recording'
 
   if (IS_FIREFOX && activeRecording.trackedTabIds.length > 0) {
@@ -115,7 +122,7 @@ function getOrCreateRequestContext(key: string, tabId: number) {
   return created
 }
 
-function isTrackableUrl(url: string | undefined) {
+function isTrackableUrl(url: string | undefined): url is string {
   if (!url) {
     return false
   }
@@ -317,7 +324,7 @@ async function tabsForScope(scope: RecordingScope, startWindowId: number, startT
   return chrome.tabs.query({})
 }
 
-async function startRecording(scope: RecordingScope) {
+async function startRecording(scope: RecordingScope, captureScreenshots = false) {
   if (activeRecording) {
     return { ok: false, error: t('error_recording_already_active') } satisfies RuntimeResponse
   }
@@ -348,6 +355,7 @@ async function startRecording(scope: RecordingScope) {
   activeRecording = {
     sessionId,
     scope,
+    captureScreenshots,
     status: 'recording',
     startTime: session.startTime,
     startTabId: session.startTabId,
@@ -402,6 +410,8 @@ async function stopRecording(openResults = true) {
   const resultUrl = chrome.runtime.getURL(`results.html?sessionId=${finalState.sessionId}`)
   activeRecording = null
   requestContexts.clear()
+  navigationActions.clear()
+  pendingScreenshotEvents.clear()
   firefoxNetworkCapture?.clear()
   await persistActiveState()
 
@@ -426,7 +436,7 @@ async function recordSystemAction(
   info: { title?: string; url?: string; metadata?: UserActionEvent['metadata'] },
 ) {
   if (!activeRecording) {
-    return
+    return undefined
   }
 
   const event: UserActionEvent = {
@@ -441,7 +451,111 @@ async function recordSystemAction(
     metadata: info.metadata,
   }
 
+  if (type === 'navigation') {
+    if (event.ts >= (navigationActions.get(tabId)?.ts ?? 0)) {
+      navigationActions.set(tabId, event)
+    }
+  }
   await recordUserAction(event)
+  return event
+}
+
+async function findNavigationAction(sessionId: string, tabId: number, destinationUrl: string) {
+  const events = await db.userActions
+    .where('[sessionId+tabId]')
+    .equals([sessionId, tabId])
+    .filter((event) => event.type === 'navigation' && event.url === destinationUrl)
+    .sortBy('ts')
+
+  return events.at(-1)
+}
+
+async function isActiveDestinationTab(tabId: number, windowId: number, destinationUrl: string) {
+  const [[activeTab], activeWindow] = await Promise.all([
+    chrome.tabs.query({ active: true, windowId }),
+    chrome.windows.get(windowId),
+  ])
+
+  return Boolean(
+    activeWindow.focused &&
+    activeTab?.id === tabId &&
+    activeTab.windowId === windowId &&
+    activeTab.url === destinationUrl,
+  )
+}
+
+async function captureNavigationScreenshot(
+  tabId: number,
+  windowId: number,
+  destinationUrl: string,
+) {
+  const sessionId = activeRecording?.captureScreenshots ? activeRecording.sessionId : undefined
+  if (!sessionId || !isTrackableUrl(destinationUrl)) {
+    return
+  }
+
+  const navigationEvent = navigationActions.get(tabId)
+  const candidate =
+    navigationEvent?.sessionId === sessionId &&
+    navigationEvent.url === destinationUrl
+      ? navigationEvent
+      : undefined
+  const storedEvent = await findNavigationAction(sessionId, tabId, destinationUrl)
+  const event = !storedEvent || (candidate && candidate.ts >= storedEvent.ts) ? candidate ?? storedEvent : storedEvent
+  if (!event) {
+    return
+  }
+
+  const eventKey = `${sessionId}:${event.id}`
+  if (pendingScreenshotEvents.has(eventKey)) {
+    return
+  }
+
+  pendingScreenshotEvents.add(eventKey)
+  try {
+    const storedEvent = await db.userActions.get(event.id)
+    if (!storedEvent || typeof storedEvent.metadata?.[NAVIGATION_SCREENSHOT_METADATA_KEY] === 'string') {
+      return
+    }
+
+    if (!await isActiveDestinationTab(tabId, windowId, destinationUrl)) {
+      return
+    }
+
+    const screenshot = await chrome.tabs.captureVisibleTab(windowId, {
+      format: 'jpeg',
+      quality: NAVIGATION_SCREENSHOT_QUALITY,
+    })
+
+    if (
+      !activeRecording ||
+      activeRecording.sessionId !== sessionId ||
+      !activeRecording.captureScreenshots
+    ) {
+      return
+    }
+
+    if (!await isActiveDestinationTab(tabId, windowId, destinationUrl)) {
+      return
+    }
+
+    const latestEvent = await db.userActions.get(event.id)
+    if (!latestEvent || typeof latestEvent.metadata?.[NAVIGATION_SCREENSHOT_METADATA_KEY] === 'string') {
+      return
+    }
+
+    await db.userActions.put({
+      ...latestEvent,
+      metadata: {
+        ...latestEvent.metadata,
+        [NAVIGATION_SCREENSHOT_METADATA_KEY]: screenshot,
+      },
+    })
+  } catch (error) {
+    console.debug('Failed to capture navigation screenshot', tabId, error)
+  } finally {
+    pendingScreenshotEvents.delete(eventKey)
+  }
 }
 
 function buildExternalActionEvent(
@@ -480,7 +594,7 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender, sendRespo
         return
       }
       case 'START_RECORDING': {
-        sendResponse(await startRecording(message.scope))
+        sendResponse(await startRecording(message.scope, message.captureScreenshots === true))
         return
       }
       case 'STOP_RECORDING': {
@@ -558,7 +672,7 @@ chrome.runtime.onMessageExternal.addListener((message: ExternalMessage, sender, 
           await stopRecording(false)
         }
 
-        sendResponse(await startRecording(message.scope))
+        sendResponse(await startRecording(message.scope, message.captureScreenshots === true))
         return
       }
       case 'STOP_RECORDING': {
@@ -682,13 +796,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
     await updateTrackedTab(tab)
 
-    if (changeInfo.url) {
+    if (changeInfo.url && navigationActions.get(tabId)?.url !== changeInfo.url) {
       await recordSystemAction('navigation', tabId, { title: tab.title, url: changeInfo.url })
     }
 
-    if (changeInfo.status === 'complete' && isTrackableUrl(tab.url)) {
+    const destinationUrl = tab.url
+    if (changeInfo.status === 'complete' && isTrackableUrl(destinationUrl)) {
       await maybeAttachDebugger(tabId)
       await sendStartMessage(tabId)
+      await captureNavigationScreenshot(tabId, tab.windowId, destinationUrl)
     }
   })()
 })

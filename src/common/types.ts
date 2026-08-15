@@ -117,6 +117,7 @@ export interface RecordingStats {
 export interface ActiveRecordingState {
   sessionId: string
   scope: RecordingScope
+  captureScreenshots: boolean
   status: RecorderStatus
   startTime: number
   startTabId: number
@@ -129,6 +130,7 @@ export interface ActiveRecordingState {
 export interface RecordingStateSnapshot {
   active: boolean
   status: RecorderStatus
+  captureScreenshots: boolean
   sessionId?: string
   scope?: RecordingScope
   startTime?: number
@@ -138,7 +140,7 @@ export interface RecordingStateSnapshot {
 
 export type RuntimeMessage =
   | { type: 'GET_RECORDING_STATE' }
-  | { type: 'START_RECORDING'; scope: RecordingScope }
+  | { type: 'START_RECORDING'; scope: RecordingScope; captureScreenshots?: boolean }
   | { type: 'STOP_RECORDING' }
   | { type: 'CONTENT_BOOTSTRAP_REQUEST'; url: string; title: string }
   | { type: 'RECORDED_USER_ACTION'; event: UserActionEvent }
@@ -163,7 +165,7 @@ export type ExternalActionInput = {
 
 export type ExternalMessage =
   | { type: 'GET_RECORDING_STATE' }
-  | { type: 'START_RECORDING'; scope: RecordingScope; restart?: boolean }
+  | { type: 'START_RECORDING'; scope: RecordingScope; captureScreenshots?: boolean; restart?: boolean }
   | { type: 'STOP_RECORDING'; openResults?: boolean }
   | { type: 'INGEST_ACTION'; event: ExternalActionInput }
   | { type: 'INGEST_REPLAY'; payload: unknown }
